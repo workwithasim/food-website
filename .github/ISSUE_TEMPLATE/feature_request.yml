@@ -1,0 +1,59 @@
+name: 💡 Feature Request
+description: Suggest an idea or feature for the Restaurant Platform
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature! Please provide as much detail as possible to help us understand your idea.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem? Please describe clearly.
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented.
+      placeholder: "A clear and concise description of what you want to happen."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe any alternative solutions or features you've considered.
+      placeholder: "A clear description of any alternative solutions you thought of."
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area / Component
+      options:
+        - API (NestJS)
+        - Customer Web (Next.js)
+        - Ops Web (Admin/KDS/Dispatch)
+        - Customer App (Expo)
+        - Rider App (Expo)
+        - Shared Packages (Contracts/Database)
+        - Payments & Billing
+        - Notifications & Real-time
+        - Analytics & Reporting
+        - DevOps / Infrastructure
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Would you like to implement this feature?
+      options:
+        - label: Yes, I would like to submit a Pull Request for this!

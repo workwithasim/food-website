@@ -1,0 +1,77 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behaviour
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill in as much detail as possible.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / Branch
+      placeholder: "e.g. v1.0.0 or main"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: "When I do X, Y happens instead of Z."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Exact steps to reproduce the bug.
+      placeholder: |
+        1. POST /api/v1/auth/login with {...}
+        2. See error response
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behaviour
+      placeholder: "What should have happened?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behaviour
+      placeholder: "What actually happened? Include error messages and stack traces."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - API (NestJS)
+        - Customer Web (Next.js)
+        - Ops Web (Next.js)
+        - Customer App (Expo)
+        - Rider App (Expo)
+        - Database / Migrations
+        - Auth / RBAC
+        - Payments (Stripe)
+        - Real-time (Socket.IO)
+        - CI/CD / Infrastructure
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Logs, screenshots, environment details, etc.

@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Changelog Notes
+        id: release_notes
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "Processing release notes for $VERSION..."
+          # Extract notes from CHANGELOG.md if available, or generate from git log
+          if [ -f CHANGELOG.md ]; then
+            echo "Found CHANGELOG.md, extracting notes..."
+            python3 -c "
+import sys, re
+version = '$VERSION'.lstrip('v')
+with open('CHANGELOG.md', 'r') as f:
+    content = f.read()
+
+pattern = r'## \[' + re.escape(version) + r'\][^\n]*\n(.*?)(?=\n## \[|\Z)'
+match = re.search(pattern, content, re.DOTALL)
+if match:
+    with open('RELEASE_NOTES.md', 'w') as out:
+        out.write(match.group(1).strip() + '\n')
+    print('Notes extracted successfully')
+else:
+    print('Version section not found in CHANGELOG, using git commits')
+    sys.exit(1)
+" || (git log -10 --pretty=format:"* %s (%h)" > RELEASE_NOTES.md)
+          else
+            git log -10 --pretty=format:"* %s (%h)" > RELEASE_NOTES.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

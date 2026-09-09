@@ -8,9 +8,11 @@
     "start": "node dist/main",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run src",
+    "test:unit": "vitest run src",
     "test:integration": "vitest run test",
-    "test:e2e": "vitest run test/*.e2e.test.ts"
+    "test:e2e": "vitest run test/*.e2e.test.ts",
+    "test:all": "vitest run"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.11",
@@ -18,11 +20,11 @@
     "@nestjs/core": "^11.0.11",
     "@nestjs/jwt": "^12.0.1",
     "@nestjs/platform-express": "^11.0.11",
-    "@nestjs/platform-socket.io": "^12.0.1",
+    "@nestjs/platform-socket.io": "^11.2.3",
     "@nestjs/swagger": "^11.0.6",
     "@nestjs/terminus": "^11.0.0",
     "@nestjs/throttler": "^6.5.0",
-    "@nestjs/websockets": "^12.0.1",
+    "@nestjs/websockets": "^11.2.3",
     "@restaurant/contracts": "workspace:*",
     "@restaurant/database": "workspace:*",
     "@restaurant/observability": "workspace:*",
