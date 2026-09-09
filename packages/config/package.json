@@ -1,0 +1,15 @@
+{
+  "name": "@restaurant/config",
+  "version": "1.0.0",
+  "private": true,
+  "files": [
+    "tsconfig.base.json",
+    "tsconfig.react.json",
+    "tsconfig.node.json",
+    "eslint.config.mjs"
+  ],
+  "scripts": {
+    "lint": "echo 'No lint for config package'",
+    "typecheck": "echo 'No typecheck for config package'"
+  }
+}

@@ -1,0 +1,76 @@
+export enum OrderStatus {
+  PLACED = "PLACED",
+  CONFIRMED = "CONFIRMED",
+  PREPARING = "PREPARING",
+  READY = "READY",
+  RIDER_ASSIGNED = "RIDER_ASSIGNED",
+  PICKED_UP = "PICKED_UP",
+  ON_THE_WAY = "ON_THE_WAY",
+  DELIVERED = "DELIVERED",
+  REJECTED = "REJECTED",
+  CANCELLED = "CANCELLED",
+  FAILED = "FAILED"
+}
+
+export enum PaymentStatus {
+  PENDING = "PENDING",
+  AUTHORIZED = "AUTHORIZED",
+  PAID = "PAID",
+  FAILED = "FAILED",
+  CANCELLED = "CANCELLED",
+  PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED",
+  REFUNDED = "REFUNDED",
+  COD_DUE = "COD_DUE",
+  COD_COLLECTED = "COD_COLLECTED"
+}
+
+export enum OrderChannel {
+  WEB = "WEB",
+  MOBILE = "MOBILE",
+  POS = "POS",
+  ADMIN = "ADMIN",
+  QR = "QR"
+}
+
+export enum FulfillmentType {
+  DELIVERY = "DELIVERY",
+  PICKUP = "PICKUP",
+  DINE_IN = "DINE_IN"
+}
+
+export enum ActorType {
+  CUSTOMER = "CUSTOMER",
+  STAFF = "STAFF",
+  RIDER = "RIDER",
+  SYSTEM = "SYSTEM"
+}
+
+export enum TenantStatus {
+  ACTIVE = "ACTIVE",
+  SUSPENDED = "SUSPENDED",
+  TRIAL = "TRIAL",
+  CLOSED = "CLOSED"
+}
+
+export enum BranchStatus {
+  ACTIVE = "ACTIVE",
+  PAUSED = "PAUSED",
+  CLOSED = "CLOSED"
+}
+
+export enum UserRole {
+  SUPER_ADMIN = "SUPER_ADMIN",
+  TENANT_ADMIN = "TENANT_ADMIN",
+  BRANCH_MANAGER = "BRANCH_MANAGER",
+  KITCHEN_STAFF = "KITCHEN_STAFF",
+  RIDER = "RIDER",
+  CASHIER = "CASHIER",
+  SUPPORT_AGENT = "SUPPORT_AGENT"
+}
+
+export enum RiderAvailabilityState {
+  OFFLINE = "OFFLINE",
+  AVAILABLE = "AVAILABLE",
+  BUSY = "BUSY",
+  PAUSED = "PAUSED"
+}
