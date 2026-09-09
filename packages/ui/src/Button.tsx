@@ -6,7 +6,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   isLoading?: boolean;
 }
 
-export const Button: React.FC<ButtonProps> = ({
+export function Button({
   children,
   variant = "primary",
   size = "md",
@@ -15,7 +15,7 @@ export const Button: React.FC<ButtonProps> = ({
   className = "",
   style,
   ...props
-}) => {
+}: ButtonProps): React.JSX.Element {
   const baseStyle: React.CSSProperties = {
     display: "inline-flex",
     alignItems: "center",

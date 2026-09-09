@@ -4,13 +4,13 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: "default" | "success" | "warning" | "danger" | "muted";
 }
 
-export const Badge: React.FC<BadgeProps> = ({
+export function Badge({
   children,
   variant = "default",
   className = "",
   style,
   ...props
-}) => {
+}: BadgeProps): React.JSX.Element {
   const variantStyles: Record<string, React.CSSProperties> = {
     default: {
       backgroundColor: "rgba(225, 29, 72, 0.1)",

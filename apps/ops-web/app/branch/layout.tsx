@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { ReactNode } from 'react';
+import React from 'react';
 
-export default function BranchLayout({ children }: { children: ReactNode }) {
+export default function BranchLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen bg-gray-50 text-gray-900">
       {/* Sidebar Navigation */}

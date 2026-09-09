@@ -1,7 +1,7 @@
-import { ReactNode } from 'react';
 import Link from 'next/link';
+import React from 'react';
 
-export default function KDSLayout({ children }: { children: ReactNode }) {
+export default function KDSLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-gray-100 overflow-hidden">
       {/* Top Navigation Bar - Designed to be small to maximize screen real estate */}

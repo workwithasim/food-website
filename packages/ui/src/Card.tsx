@@ -4,13 +4,13 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   padding?: "none" | "sm" | "md" | "lg";
 }
 
-export const Card: React.FC<CardProps> = ({
+export function Card({
   children,
   padding = "md",
   className = "",
   style,
   ...props
-}) => {
+}: CardProps): React.JSX.Element {
   const paddingMap: Record<string, string> = {
     none: "0",
     sm: "12px",
