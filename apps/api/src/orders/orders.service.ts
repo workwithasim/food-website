@@ -4,12 +4,14 @@ import { ClsService } from 'nestjs-cls';
 import { TenantContext } from '../tenancy/tenant.context';
 import { TenantScopedRepository } from '../tenancy/tenant-scoped.repository';
 import { PricingService } from '../pricing/pricing.service';
+import { PaymentsService } from '../payments/services/payments.service';
 import { randomBytes } from 'crypto';
 
 export interface CreateOrderDto {
   cart_id: string;
   branch_id: string;
   idempotency_key: string;
+  payment_method?: 'COD' | 'ONLINE'; // default to ONLINE
   customer_name?: string;
   customer_phone?: string;
   customer_note?: string;
@@ -22,6 +24,7 @@ export class OrdersService extends TenantScopedRepository {
     @Inject(DatabaseService) db: DatabaseService,
     @Inject(ClsService) cls: ClsService<TenantContext>,
     private pricingService: PricingService,
+    private paymentsService: PaymentsService,
   ) {
     super(db, cls);
   }
@@ -170,7 +173,13 @@ export class OrdersService extends TenantScopedRepository {
       return order;
     });
 
-    return result;
+    // 4. Create Payment (outside transaction or inside, but our payment service expects the order to be passed. Since we used a transaction and payment creates its own records, it's safer to do this outside if payment service calls intent creation which is an external API call).
+    const paymentResult = await this.paymentsService.createPaymentForOrder(
+      result,
+      dto.payment_method || 'ONLINE'
+    );
+
+    return { order: result, payment: paymentResult };
   }
 
   async getOrder(orderId: string) {
