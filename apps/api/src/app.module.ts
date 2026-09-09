@@ -5,6 +5,8 @@ import { DatabaseModule } from "./database/database.module";
 import { TenancyModule } from "./tenancy/tenancy.module";
 import { TenantMiddleware } from "./tenancy/tenant.middleware";
 import { AuthModule } from "./auth/auth.module";
+import { RbacModule } from "./rbac/rbac.module";
+import { StaffModule } from "./staff/staff.module";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerStorageRedisService } from "nestjs-throttler-storage-redis";
@@ -30,6 +32,8 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     DatabaseModule,
     TenancyModule,
     AuthModule,
+    RbacModule,
+    StaffModule,
   ],
   providers: [
     {
