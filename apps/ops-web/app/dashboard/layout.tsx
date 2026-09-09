@@ -11,25 +11,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <p className="text-sm text-gray-500">Ops Web</p>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          <Link href="/dashboard" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium">Dashboard</Link>
-          <Link href="/dashboard/orders" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium">Orders</Link>
+          <Link href="/dashboard" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-gray-900">Dashboard</Link>
+          <Link href="/dashboard/orders" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-gray-700">Orders</Link>
           
           <div className="pt-4 pb-2">
-            <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Menu</p>
+            <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Menu Catalog</p>
           </div>
-          <Link href="/dashboard/catalog/categories" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium">Categories</Link>
-          <Link href="/dashboard/catalog/products" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium">Products</Link>
-          <Link href="/dashboard/catalog/modifiers" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium">Modifier Groups</Link>
+          <Link href="/dashboard/catalog/categories" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-gray-700">Categories</Link>
+          <Link href="/dashboard/catalog/products" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-gray-700">Products</Link>
+          <Link href="/dashboard/catalog/modifiers" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-gray-700">Modifier Groups</Link>
           
           <div className="pt-4 pb-2">
-            <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Operations</p>
+            <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Administration</p>
           </div>
-          <Link href="/dashboard/branches" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium">Branches</Link>
-          <Link href="/dashboard/staff" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium">Staff</Link>
-          <Link href="/dashboard/settings" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium">Settings</Link>
+          <Link href="/dashboard/branches" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-gray-700">Branches</Link>
+          <Link href="/dashboard/staff" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-gray-700">Staff Management</Link>
+          <Link href="/dashboard/settings" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-gray-700">Settings</Link>
+
+          <div className="pt-4 pb-2">
+            <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Operations</p>
+          </div>
+          <Link href="/kds" className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-emerald-50 text-sm font-medium text-emerald-700">
+            <span>Kitchen Display</span>
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          </Link>
+          <Link href="/branch" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-gray-700">Branch Portal</Link>
+          <a href="http://localhost:3002" target="_blank" rel="noreferrer" className="block px-3 py-2 rounded-md hover:bg-blue-50 text-sm font-medium text-blue-600">
+            Customer Store ↗
+          </a>
         </nav>
         <div className="p-4 border-t border-gray-200">
-          <button className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-red-600">Sign Out</button>
+          <Link href="/dashboard" className="w-full block text-left px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-gray-500">Admin Session Active</Link>
         </div>
       </aside>
 
