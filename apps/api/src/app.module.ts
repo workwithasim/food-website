@@ -23,6 +23,8 @@ import { PaymentsModule } from "./payments/payments.module";
 import { RealtimeModule } from "./realtime/realtime.module";
 import { DeliveriesModule } from "./deliveries/deliveries.module";
 import { RidersModule } from "./riders/riders.module";
+import { ChatModule } from "./chat/chat.module";
+import { NotificationsModule } from "./notifications/notifications.module";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerStorageRedisService } from "nestjs-throttler-storage-redis";
@@ -60,6 +62,8 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     RealtimeModule,
     DeliveriesModule,
     RidersModule,
+    ChatModule,
+    NotificationsModule,
   ],
   providers: [
     {

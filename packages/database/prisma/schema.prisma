@@ -223,6 +223,8 @@ model User {
   delivery_assignments   DeliveryAssignment[]
   cod_ledgers_as_rider   CodLedger[]            @relation("CodRider")
   cod_ledgers_as_settler CodLedger[]            @relation("CodSettler")
+  chat_messages          ChatMessage[]
+  notification_events    NotificationEvent[]
 
   @@map("users")
 }
@@ -699,6 +701,8 @@ model Order {
   items               OrderItem[]
   history             OrderStatusHistory[]
   delivery_assignment DeliveryAssignment?
+  chat_threads        ChatThread[]
+  notification_events NotificationEvent[]
 
   @@unique([tenant_id, order_number])
   @@index([tenant_id, branch_id, status, created_at(sort: Desc)])
@@ -983,4 +987,69 @@ model CodLedger {
 
   @@index([tenant_id, rider_id, created_at(sort: Desc)])
   @@map("cod_ledgers")
+}
+
+// ─── Chat & Notifications ─────────────────────────────────────────────────────
+
+enum ChatThreadStatus {
+  OPEN
+  CLOSED
+}
+
+model ChatThread {
+  id         String           @id @default(uuid()) @db.Uuid
+  tenant_id  String           @db.Uuid
+  order_id   String           @db.Uuid
+  status     ChatThreadStatus @default(OPEN)
+  created_at DateTime         @default(now()) @db.Timestamptz
+  updated_at DateTime         @updatedAt @db.Timestamptz
+
+  order    Order         @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([tenant_id, order_id])
+  @@map("chat_threads")
+}
+
+model ChatMessage {
+  id         String    @id @default(uuid()) @db.Uuid
+  thread_id  String    @db.Uuid
+  sender_id  String    @db.Uuid
+  content    String    @db.Text
+  created_at DateTime  @default(now()) @db.Timestamptz
+  read_at    DateTime? @db.Timestamptz
+
+  thread ChatThread @relation(fields: [thread_id], references: [id], onDelete: Cascade)
+  sender User       @relation(fields: [sender_id], references: [id], onDelete: Cascade)
+
+  @@index([thread_id, created_at(sort: Asc)])
+  @@map("chat_messages")
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model NotificationEvent {
+  id              String             @id @default(uuid()) @db.Uuid
+  tenant_id       String             @db.Uuid
+  user_id         String?            @db.Uuid
+  order_id        String?            @db.Uuid
+  channel         String             @db.VarChar // EMAIL, SMS, PUSH
+  template_name   String             @db.VarChar
+  payload         Json?              @db.JsonB
+  status          NotificationStatus @default(PENDING)
+  error_message   String?            @db.Text
+  idempotency_key String?            @unique @db.VarChar
+  created_at      DateTime           @default(now()) @db.Timestamptz
+  sent_at         DateTime?          @db.Timestamptz
+
+  user  User?  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, user_id, created_at(sort: Desc)])
+  @@index([idempotency_key])
+  @@map("notification_events")
 }
