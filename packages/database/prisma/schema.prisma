@@ -38,6 +38,7 @@ model Tenant {
   otp_challenges   OtpChallenge[]
   categories       Category[]
   products         Product[]
+  modifier_groups  ModifierGroup[]
 
   @@map("tenants")
 }
@@ -409,10 +410,12 @@ model Product {
   updated_at               DateTime      @updatedAt @db.Timestamptz
   deleted_at               DateTime?     @db.Timestamptz
 
-  tenant        Tenant         @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  category      Category       @relation(fields: [category_id], references: [id])
-  media         ProductMedia[]
+  tenant           Tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  category         Category               @relation(fields: [category_id], references: [id])
+  media            ProductMedia[]
   branch_overrides BranchProduct[]
+  variants         ProductVariant[]
+  modifier_groups  ProductModifierGroup[]
 
   @@unique([tenant_id, slug])
   @@index([tenant_id, status, category_id])
@@ -437,15 +440,15 @@ model ProductMedia {
 }
 
 model BranchProduct {
-  tenant_id                  String    @db.Uuid
-  branch_id                  String    @db.Uuid
-  product_id                 String    @db.Uuid
-  enabled                    Boolean   @default(true)
-  sold_out                   Boolean   @default(false)
-  price_override_minor       BigInt?
-  preparation_time_override  Int?
-  available_from             DateTime? @db.Timestamptz
-  available_until            DateTime? @db.Timestamptz
+  tenant_id                 String    @db.Uuid
+  branch_id                 String    @db.Uuid
+  product_id                String    @db.Uuid
+  enabled                   Boolean   @default(true)
+  sold_out                  Boolean   @default(false)
+  price_override_minor      BigInt?
+  preparation_time_override Int?
+  available_from            DateTime? @db.Timestamptz
+  available_until           DateTime? @db.Timestamptz
 
   branch  Branch  @relation(fields: [branch_id], references: [id], onDelete: Cascade)
   product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
@@ -455,3 +458,76 @@ model BranchProduct {
   @@map("branch_products")
 }
 
+// ─── Variants & Modifiers ─────────────────────────────────────────────────────
+
+enum VariantStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model ProductVariant {
+  id          String        @id @default(uuid()) @db.Uuid
+  tenant_id   String        @db.Uuid
+  product_id  String        @db.Uuid
+  name        String        @db.VarChar
+  sku         String?       @db.VarChar
+  price_minor BigInt
+  status      VariantStatus @default(ACTIVE)
+  sort_order  Int           @default(0)
+  created_at  DateTime      @default(now()) @db.Timestamptz
+  updated_at  DateTime      @updatedAt @db.Timestamptz
+
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, product_id, status])
+  @@map("product_variants")
+}
+
+model ModifierGroup {
+  id         String        @id @default(uuid()) @db.Uuid
+  tenant_id  String        @db.Uuid
+  name       String        @db.VarChar
+  min_select Int           @default(0)
+  max_select Int           @default(1)
+  required   Boolean       @default(false)
+  status     VariantStatus @default(ACTIVE)
+  created_at DateTime      @default(now()) @db.Timestamptz
+  updated_at DateTime      @updatedAt @db.Timestamptz
+
+  tenant    Tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  modifiers Modifier[]
+  products  ProductModifierGroup[]
+
+  @@index([tenant_id, status])
+  @@map("modifier_groups")
+}
+
+model Modifier {
+  id                String        @id @default(uuid()) @db.Uuid
+  tenant_id         String        @db.Uuid
+  modifier_group_id String        @db.Uuid
+  name              String        @db.VarChar
+  price_delta_minor BigInt        @default(0)
+  status            VariantStatus @default(ACTIVE)
+  sort_order        Int           @default(0)
+  created_at        DateTime      @default(now()) @db.Timestamptz
+  updated_at        DateTime      @updatedAt @db.Timestamptz
+
+  group ModifierGroup @relation(fields: [modifier_group_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, modifier_group_id, status])
+  @@map("modifiers")
+}
+
+model ProductModifierGroup {
+  tenant_id         String @db.Uuid
+  product_id        String @db.Uuid
+  modifier_group_id String @db.Uuid
+  sort_order        Int    @default(0)
+
+  product        Product       @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  modifier_group ModifierGroup @relation(fields: [modifier_group_id], references: [id], onDelete: Cascade)
+
+  @@id([tenant_id, product_id, modifier_group_id])
+  @@map("product_modifier_groups")
+}
