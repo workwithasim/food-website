@@ -6,10 +6,14 @@ import { LocationSelector } from './LocationSelector';
 import { AuthDialog } from './AuthDialog';
 import { MobileNav } from './MobileNav';
 import Link from 'next/link';
+import { useCart } from './CartProvider';
 
 export function Header() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const { cart, setSidebarOpen } = useCart();
+  
+  const cartItemCount = cart?.items?.reduce((acc: number, item: any) => acc + item.quantity, 0) || 0;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white">
@@ -47,8 +51,8 @@ export function Header() {
             Sign In
           </Button>
           
-          <Button variant="primary">
-            Cart (0)
+          <Button variant="primary" onClick={() => setSidebarOpen(true)}>
+            Cart ({cartItemCount})
           </Button>
         </div>
       </div>

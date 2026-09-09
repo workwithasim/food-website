@@ -416,6 +416,7 @@ model Product {
   branch_overrides BranchProduct[]
   variants         ProductVariant[]
   modifier_groups  ProductModifierGroup[]
+  cartItems        CartItem[]
 
   @@unique([tenant_id, slug])
   @@index([tenant_id, status, category_id])
@@ -477,7 +478,8 @@ model ProductVariant {
   created_at  DateTime      @default(now()) @db.Timestamptz
   updated_at  DateTime      @updatedAt @db.Timestamptz
 
-  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  product   Product    @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  cartItems CartItem[]
 
   @@index([tenant_id, product_id, status])
   @@map("product_variants")
@@ -513,7 +515,8 @@ model Modifier {
   created_at        DateTime      @default(now()) @db.Timestamptz
   updated_at        DateTime      @updatedAt @db.Timestamptz
 
-  group ModifierGroup @relation(fields: [modifier_group_id], references: [id], onDelete: Cascade)
+  group             ModifierGroup      @relation(fields: [modifier_group_id], references: [id], onDelete: Cascade)
+  cartItemModifiers CartItemModifier[]
 
   @@index([tenant_id, modifier_group_id, status])
   @@map("modifiers")
@@ -530,4 +533,68 @@ model ProductModifierGroup {
 
   @@id([tenant_id, product_id, modifier_group_id])
   @@map("product_modifier_groups")
+}
+
+// ─── Cart ─────────────────────────────────────────────────────────────────────
+
+enum CartStatus {
+  ACTIVE
+  CONVERTED
+  ABANDONED
+}
+
+enum FulfillmentMethod {
+  DELIVERY
+  PICKUP
+}
+
+model Cart {
+  id                 String            @id @default(uuid()) @db.Uuid
+  tenant_id          String            @db.Uuid
+  customer_id        String?           @db.Uuid
+  guest_token        String?           @db.VarChar
+  branch_id          String?           @db.Uuid
+  fulfillment_method FulfillmentMethod @default(DELIVERY)
+  status             CartStatus        @default(ACTIVE)
+  expires_at         DateTime          @db.Timestamptz
+  created_at         DateTime          @default(now()) @db.Timestamptz
+  updated_at         DateTime          @updatedAt @db.Timestamptz
+
+  items CartItem[]
+
+  @@unique([tenant_id, guest_token])
+  @@index([tenant_id, customer_id, status])
+  @@index([tenant_id, guest_token, status])
+  @@map("carts")
+}
+
+model CartItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  cart_id    String   @db.Uuid
+  product_id String   @db.Uuid
+  variant_id String?  @db.Uuid
+  quantity   Int      @default(1)
+  notes      String?  @db.VarChar
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @updatedAt @db.Timestamptz
+
+  cart      Cart               @relation(fields: [cart_id], references: [id], onDelete: Cascade)
+  product   Product            @relation(fields: [product_id], references: [id])
+  variant   ProductVariant?    @relation(fields: [variant_id], references: [id])
+  modifiers CartItemModifier[]
+
+  @@index([cart_id])
+  @@map("cart_items")
+}
+
+model CartItemModifier {
+  id           String @id @default(uuid()) @db.Uuid
+  cart_item_id String @db.Uuid
+  modifier_id  String @db.Uuid
+
+  cart_item CartItem @relation(fields: [cart_item_id], references: [id], onDelete: Cascade)
+  modifier  Modifier @relation(fields: [modifier_id], references: [id])
+
+  @@index([cart_item_id])
+  @@map("cart_item_modifiers")
 }

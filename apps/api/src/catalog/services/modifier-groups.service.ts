@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { ClsService } from 'nestjs-cls';
 import { TenantContext } from '../../tenancy/tenant.context';

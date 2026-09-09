@@ -15,6 +15,7 @@ import { RbacModule } from "./rbac/rbac.module";
 import { StaffModule } from "./staff/staff.module";
 import { BranchesModule } from "./branches/branches.module";
 import { CatalogModule } from "./catalog/catalog.module";
+import { CartModule } from "./cart/cart.module";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerStorageRedisService } from "nestjs-throttler-storage-redis";
@@ -44,6 +45,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     StaffModule,
     BranchesModule,
     CatalogModule,
+    CartModule,
   ],
   providers: [
     {

@@ -2,17 +2,20 @@
 
 import React, { useState } from 'react';
 import { Button } from '@restaurant/ui';
+import { useCart } from './CartProvider';
 
 interface ProductCustomizerProps {
   product: any; // We'll type this properly later, but it contains variants and modifier_groups
 }
 
 export function ProductCustomizer({ product }: ProductCustomizerProps) {
+  const { addToCart } = useCart();
   const [selectedVariant, setSelectedVariant] = useState<string | null>(
     product.variants?.length > 0 ? product.variants[0].id : null
   );
   
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, string[]>>({});
+  const [quantity, setQuantity] = useState(1);
   
   const handleModifierToggle = (groupId: string, modifierId: string, maxSelections: number) => {
     setSelectedModifiers(prev => {
@@ -42,7 +45,12 @@ export function ProductCustomizer({ product }: ProductCustomizerProps) {
       });
     });
     
-    return (total / 100).toFixed(2);
+    return ((total * quantity) / 100).toFixed(2);
+  };
+
+  const handleAddToCart = () => {
+    const mods = Object.values(selectedModifiers).flat();
+    addToCart(product.id, selectedVariant || undefined, quantity, mods);
   };
 
   return (
@@ -110,11 +118,11 @@ export function ProductCustomizer({ product }: ProductCustomizerProps) {
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t flex gap-4 md:static md:mt-4 md:border-none">
         <div className="flex items-center justify-center bg-gray-100 rounded-lg px-4 gap-4">
-          <button className="text-xl font-bold w-8">-</button>
-          <span className="font-medium">1</span>
-          <button className="text-xl font-bold w-8">+</button>
+          <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="text-xl font-bold w-8">-</button>
+          <span className="font-medium">{quantity}</span>
+          <button onClick={() => setQuantity(quantity + 1)} className="text-xl font-bold w-8">+</button>
         </div>
-        <Button variant="primary" className="flex-1 justify-between text-lg py-6 rounded-xl">
+        <Button variant="primary" className="flex-1 justify-between text-lg py-6 rounded-xl" onClick={handleAddToCart}>
           <span>Add to Order</span>
           <span>{product.currency_code} {calculateTotal()}</span>
         </Button>
