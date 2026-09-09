@@ -138,6 +138,7 @@ model Branch {
   branch_products  BranchProduct[]
   rider_profiles   RiderProfile[]
   cod_ledgers      CodLedger[]
+  promotionRules   PromotionRule[]
 
   @@unique([tenant_id, code])
   @@index([location], type: Gist)
@@ -703,6 +704,7 @@ model Order {
   delivery_assignment DeliveryAssignment?
   chat_threads        ChatThread[]
   notification_events NotificationEvent[]
+  orderPromotions     OrderPromotion[]
 
   @@unique([tenant_id, order_number])
   @@index([tenant_id, branch_id, status, created_at(sort: Desc)])
@@ -1052,4 +1054,87 @@ model NotificationEvent {
   @@index([tenant_id, user_id, created_at(sort: Desc)])
   @@index([idempotency_key])
   @@map("notification_events")
+}
+
+// ─── Promotions & CMS ────────────────────────────────────────────────────────
+
+enum PromotionType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_DELIVERY
+}
+
+enum PromotionStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Promotion {
+  id               String          @id @default(uuid()) @db.Uuid
+  tenant_id        String          @db.Uuid
+  code             String          @db.VarChar // e.g. "SUMMER20"
+  type             PromotionType
+  value            BigInt // Percentage (e.g. 2000 = 20%) or minor units for FIXED
+  status           PromotionStatus @default(ACTIVE)
+  start_date       DateTime?       @db.Timestamptz
+  end_date         DateTime?       @db.Timestamptz
+  usage_limit      Int? // e.g. only 100 uses total
+  current_usage    Int             @default(0)
+  min_order_amount BigInt?
+  created_at       DateTime        @default(now()) @db.Timestamptz
+  updated_at       DateTime        @updatedAt @db.Timestamptz
+
+  rules            PromotionRule[]
+  order_promotions OrderPromotion[]
+
+  @@unique([tenant_id, code])
+  @@index([tenant_id, status])
+  @@map("promotions")
+}
+
+model PromotionRule {
+  id           String   @id @default(uuid()) @db.Uuid
+  promotion_id String   @db.Uuid
+  branch_id    String?  @db.Uuid // If restricted to a branch
+  category_id  String?  @db.Uuid // If restricted to a category
+  product_id   String?  @db.Uuid // If restricted to a specific product
+  created_at   DateTime @default(now()) @db.Timestamptz
+
+  promotion Promotion @relation(fields: [promotion_id], references: [id], onDelete: Cascade)
+  branch    Branch?   @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+
+  @@index([promotion_id])
+  @@map("promotion_rules")
+}
+
+model OrderPromotion {
+  id             String   @id @default(uuid()) @db.Uuid
+  order_id       String   @db.Uuid
+  promotion_id   String   @db.Uuid
+  discount_minor BigInt // Exact amount discounted
+  applied_at     DateTime @default(now()) @db.Timestamptz
+
+  order     Order     @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  promotion Promotion @relation(fields: [promotion_id], references: [id], onDelete: Cascade)
+
+  @@index([order_id])
+  @@index([promotion_id])
+  @@map("order_promotions")
+}
+
+model Banner {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenant_id  String    @db.Uuid
+  title      String    @db.VarChar
+  image_url  String    @db.VarChar
+  target_url String?   @db.VarChar
+  is_active  Boolean   @default(true)
+  sort_order Int       @default(0)
+  start_date DateTime? @db.Timestamptz
+  end_date   DateTime? @db.Timestamptz
+  created_at DateTime  @default(now()) @db.Timestamptz
+  updated_at DateTime  @updatedAt @db.Timestamptz
+
+  @@index([tenant_id, is_active])
+  @@map("banners")
 }
