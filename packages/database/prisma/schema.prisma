@@ -136,6 +136,8 @@ model Branch {
   delivery_zones   DeliveryZone[]
   user_assignments UserBranchAssignment[]
   branch_products  BranchProduct[]
+  rider_profiles   RiderProfile[]
+  cod_ledgers      CodLedger[]
 
   @@unique([tenant_id, code])
   @@index([location], type: Gist)
@@ -215,8 +217,12 @@ model User {
   created_at    DateTime   @default(now()) @db.Timestamptz
   updated_at    DateTime   @updatedAt @db.Timestamptz
 
-  memberships        TenantMembership[]
-  branch_assignments UserBranchAssignment[]
+  memberships            TenantMembership[]
+  branch_assignments     UserBranchAssignment[]
+  rider_profile          RiderProfile?
+  delivery_assignments   DeliveryAssignment[]
+  cod_ledgers_as_rider   CodLedger[]            @relation("CodRider")
+  cod_ledgers_as_settler CodLedger[]            @relation("CodSettler")
 
   @@map("users")
 }
@@ -654,44 +660,45 @@ enum PaymentStatus {
 }
 
 model Order {
-  id                        String        @id @default(uuid()) @db.Uuid
-  tenant_id                 String        @db.Uuid
-  branch_id                 String        @db.Uuid
-  customer_id               String?       @db.Uuid
-  order_number              String        @db.VarChar
+  id                        String                                @id @default(uuid()) @db.Uuid
+  tenant_id                 String                                @db.Uuid
+  branch_id                 String                                @db.Uuid
+  customer_id               String?                               @db.Uuid
+  order_number              String                                @db.VarChar
   channel                   OrderChannel
   fulfillment_type          FulfillmentMethod
-  status                    OrderStatus   @default(PLACED)
-  payment_status            PaymentStatus @default(PENDING)
-  currency_code             String        @db.Char(3)
+  status                    OrderStatus                           @default(PLACED)
+  payment_status            PaymentStatus                         @default(PENDING)
+  currency_code             String                                @db.Char(3)
   subtotal_minor            BigInt
-  item_discount_minor       BigInt        @default(0)
-  promotion_discount_minor  BigInt        @default(0)
-  coupon_discount_minor     BigInt        @default(0)
-  delivery_fee_minor        BigInt        @default(0)
-  service_fee_minor         BigInt        @default(0)
-  tax_minor                 BigInt        @default(0)
-  tip_minor                 BigInt        @default(0)
-  wallet_credit_minor       BigInt        @default(0)
+  item_discount_minor       BigInt                                @default(0)
+  promotion_discount_minor  BigInt                                @default(0)
+  coupon_discount_minor     BigInt                                @default(0)
+  delivery_fee_minor        BigInt                                @default(0)
+  service_fee_minor         BigInt                                @default(0)
+  tax_minor                 BigInt                                @default(0)
+  tip_minor                 BigInt                                @default(0)
+  wallet_credit_minor       BigInt                                @default(0)
   grand_total_minor         BigInt
-  paid_minor                BigInt        @default(0)
-  refunded_minor            BigInt        @default(0)
-  customer_name_snapshot    String        @db.VarChar
-  customer_phone_snapshot   String        @db.VarChar
-  delivery_address_snapshot Json?         @db.JsonB
+  paid_minor                BigInt                                @default(0)
+  refunded_minor            BigInt                                @default(0)
+  customer_name_snapshot    String                                @db.VarChar
+  customer_phone_snapshot   String                                @db.VarChar
+  delivery_address_snapshot Json?                                 @db.JsonB
   delivery_location         Unsupported("geography(Point,4326)")?
-  customer_note             String?       @db.Text
-  scheduled_for             DateTime?     @db.Timestamptz
-  placed_at                 DateTime      @db.Timestamptz
-  confirmed_at              DateTime?     @db.Timestamptz
-  ready_at                  DateTime?     @db.Timestamptz
-  delivered_at              DateTime?     @db.Timestamptz
-  cancelled_at              DateTime?     @db.Timestamptz
-  created_at                DateTime      @default(now()) @db.Timestamptz
-  updated_at                DateTime      @updatedAt @db.Timestamptz
+  customer_note             String?                               @db.Text
+  scheduled_for             DateTime?                             @db.Timestamptz
+  placed_at                 DateTime                              @db.Timestamptz
+  confirmed_at              DateTime?                             @db.Timestamptz
+  ready_at                  DateTime?                             @db.Timestamptz
+  delivered_at              DateTime?                             @db.Timestamptz
+  cancelled_at              DateTime?                             @db.Timestamptz
+  created_at                DateTime                              @default(now()) @db.Timestamptz
+  updated_at                DateTime                              @updatedAt @db.Timestamptz
 
-  items   OrderItem[]
-  history OrderStatusHistory[]
+  items               OrderItem[]
+  history             OrderStatusHistory[]
+  delivery_assignment DeliveryAssignment?
 
   @@unique([tenant_id, order_number])
   @@index([tenant_id, branch_id, status, created_at(sort: Desc)])
@@ -748,17 +755,17 @@ enum ActorType {
 }
 
 model OrderStatusHistory {
-  id          String      @id @default(uuid()) @db.Uuid
-  tenant_id   String      @db.Uuid
-  order_id    String      @db.Uuid
+  id          String       @id @default(uuid()) @db.Uuid
+  tenant_id   String       @db.Uuid
+  order_id    String       @db.Uuid
   from_status OrderStatus?
   to_status   OrderStatus
   actor_type  ActorType
-  actor_id    String?     @db.Uuid
-  reason_code String?     @db.VarChar
-  reason_text String?     @db.Text
-  source      String      @db.VarChar
-  created_at  DateTime    @default(now()) @db.Timestamptz
+  actor_id    String?      @db.Uuid
+  reason_code String?      @db.VarChar
+  reason_text String?      @db.Text
+  source      String       @db.VarChar
+  created_at  DateTime     @default(now()) @db.Timestamptz
 
   order Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
 
@@ -877,4 +884,103 @@ model OutboxEvent {
   @@index([status, created_at(sort: Asc)])
   @@index([tenant_id])
   @@map("outbox_events")
+}
+
+// ─── Riders & Delivery ────────────────────────────────────────────────────────
+
+enum RiderStatus {
+  OFFLINE
+  AVAILABLE
+  ON_DELIVERY
+}
+
+model RiderProfile {
+  user_id             String                                @id @db.Uuid
+  tenant_id           String                                @db.Uuid
+  current_branch_id   String?                               @db.Uuid
+  status              RiderStatus                           @default(OFFLINE)
+  vehicle_type        String?                               @db.VarChar
+  vehicle_plate       String?                               @db.VarChar
+  last_location       Unsupported("geography(Point,4326)")?
+  location_updated_at DateTime?                             @db.Timestamptz
+  created_at          DateTime                              @default(now()) @db.Timestamptz
+  updated_at          DateTime                              @updatedAt @db.Timestamptz
+
+  user   User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [current_branch_id], references: [id])
+
+  @@index([tenant_id, current_branch_id, status])
+  @@map("rider_profiles")
+}
+
+enum DeliveryState {
+  ASSIGNED
+  ACCEPTED
+  AT_STORE
+  PICKED_UP
+  ON_THE_WAY
+  ARRIVED
+  DELIVERED
+  CANCELLED
+}
+
+model DeliveryAssignment {
+  id                String        @id @default(uuid()) @db.Uuid
+  tenant_id         String        @db.Uuid
+  order_id          String        @unique @db.Uuid
+  rider_id          String        @db.Uuid
+  state             DeliveryState @default(ASSIGNED)
+  assigned_at       DateTime      @default(now()) @db.Timestamptz
+  accepted_at       DateTime?     @db.Timestamptz
+  picked_up_at      DateTime?     @db.Timestamptz
+  delivered_at      DateTime?     @db.Timestamptz
+  notes             String?       @db.Text
+  delivery_otp_hash String?       @db.VarChar
+
+  order                Order                 @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  rider                User                  @relation(fields: [rider_id], references: [id], onDelete: Cascade)
+  deliveryLocationLogs DeliveryLocationLog[]
+
+  @@index([tenant_id, rider_id, state])
+  @@map("delivery_assignments")
+}
+
+model DeliveryLocationLog {
+  id            String                               @id @default(uuid()) @db.Uuid
+  assignment_id String                               @db.Uuid
+  location      Unsupported("geography(Point,4326)")
+  accuracy      Float?
+  heading       Float?
+  speed         Float?
+  logged_at     DateTime                             @default(now()) @db.Timestamptz
+
+  assignment DeliveryAssignment @relation(fields: [assignment_id], references: [id], onDelete: Cascade)
+
+  @@index([assignment_id, logged_at(sort: Desc)])
+  @@map("delivery_location_logs")
+}
+
+enum CodLedgerType {
+  COLLECTED
+  SETTLED
+}
+
+model CodLedger {
+  id            String        @id @default(uuid()) @db.Uuid
+  tenant_id     String        @db.Uuid
+  rider_id      String        @db.Uuid
+  branch_id     String        @db.Uuid
+  order_id      String?       @db.Uuid
+  type          CodLedgerType
+  amount_minor  BigInt
+  reference     String?       @db.VarChar
+  created_at    DateTime      @default(now()) @db.Timestamptz
+  settled_by_id String?       @db.Uuid
+
+  rider   User   @relation("CodRider", fields: [rider_id], references: [id])
+  branch  Branch @relation(fields: [branch_id], references: [id])
+  settler User?  @relation("CodSettler", fields: [settled_by_id], references: [id])
+
+  @@index([tenant_id, rider_id, created_at(sort: Desc)])
+  @@map("cod_ledgers")
 }

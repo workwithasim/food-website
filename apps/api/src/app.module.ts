@@ -20,6 +20,9 @@ import { PricingModule } from "./pricing/pricing.module";
 import { CheckoutModule } from "./checkout/checkout.module";
 import { OrdersModule } from "./orders/orders.module";
 import { PaymentsModule } from "./payments/payments.module";
+import { RealtimeModule } from "./realtime/realtime.module";
+import { DeliveriesModule } from "./deliveries/deliveries.module";
+import { RidersModule } from "./riders/riders.module";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerStorageRedisService } from "nestjs-throttler-storage-redis";
@@ -54,6 +57,9 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     CheckoutModule,
     OrdersModule,
     PaymentsModule,
+    RealtimeModule,
+    DeliveriesModule,
+    RidersModule,
   ],
   providers: [
     {
