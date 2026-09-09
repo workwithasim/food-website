@@ -619,3 +619,149 @@ model IdempotencyKey {
   @@index([created_at])
   @@map("idempotency_keys")
 }
+
+// ─── Orders ──────────────────────────────────────────────────────────────────
+
+enum OrderChannel {
+  WEB
+  MOBILE
+  POS
+  ADMIN
+  QR
+}
+
+enum OrderStatus {
+  PLACED
+  CONFIRMED
+  PREPARING
+  READY
+  RIDER_ASSIGNED
+  PICKED_UP
+  ON_THE_WAY
+  DELIVERED
+  REJECTED
+  CANCELLED
+  FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  PAID
+  PARTIALLY_REFUNDED
+  REFUNDED
+  FAILED
+}
+
+model Order {
+  id                        String        @id @default(uuid()) @db.Uuid
+  tenant_id                 String        @db.Uuid
+  branch_id                 String        @db.Uuid
+  customer_id               String?       @db.Uuid
+  order_number              String        @db.VarChar
+  channel                   OrderChannel
+  fulfillment_type          FulfillmentMethod
+  status                    OrderStatus   @default(PLACED)
+  payment_status            PaymentStatus @default(PENDING)
+  currency_code             String        @db.Char(3)
+  subtotal_minor            BigInt
+  item_discount_minor       BigInt        @default(0)
+  promotion_discount_minor  BigInt        @default(0)
+  coupon_discount_minor     BigInt        @default(0)
+  delivery_fee_minor        BigInt        @default(0)
+  service_fee_minor         BigInt        @default(0)
+  tax_minor                 BigInt        @default(0)
+  tip_minor                 BigInt        @default(0)
+  wallet_credit_minor       BigInt        @default(0)
+  grand_total_minor         BigInt
+  paid_minor                BigInt        @default(0)
+  refunded_minor            BigInt        @default(0)
+  customer_name_snapshot    String        @db.VarChar
+  customer_phone_snapshot   String        @db.VarChar
+  delivery_address_snapshot Json?         @db.JsonB
+  delivery_location         Unsupported("geography(Point,4326)")?
+  customer_note             String?       @db.Text
+  scheduled_for             DateTime?     @db.Timestamptz
+  placed_at                 DateTime      @db.Timestamptz
+  confirmed_at              DateTime?     @db.Timestamptz
+  ready_at                  DateTime?     @db.Timestamptz
+  delivered_at              DateTime?     @db.Timestamptz
+  cancelled_at              DateTime?     @db.Timestamptz
+  created_at                DateTime      @default(now()) @db.Timestamptz
+  updated_at                DateTime      @updatedAt @db.Timestamptz
+
+  items   OrderItem[]
+  history OrderStatusHistory[]
+
+  @@unique([tenant_id, order_number])
+  @@index([tenant_id, branch_id, status, created_at(sort: Desc)])
+  @@index([tenant_id, customer_id, created_at(sort: Desc)])
+  @@index([tenant_id, payment_status, created_at(sort: Desc)])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                   String  @id @default(uuid()) @db.Uuid
+  tenant_id            String  @db.Uuid
+  order_id             String  @db.Uuid
+  product_id           String? @db.Uuid
+  variant_id           String? @db.Uuid
+  product_name         String  @db.VarChar
+  variant_name         String? @db.VarChar
+  unit_price_minor     BigInt
+  quantity             Int
+  line_subtotal_minor  BigInt
+  line_discount_minor  BigInt  @default(0)
+  line_tax_minor       BigInt  @default(0)
+  line_total_minor     BigInt
+  special_instructions String? @db.Text
+  metadata_snapshot    Json?   @db.JsonB
+
+  order     Order               @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  modifiers OrderItemModifier[]
+
+  @@index([order_id])
+  @@map("order_items")
+}
+
+model OrderItemModifier {
+  id                     String  @id @default(uuid()) @db.Uuid
+  tenant_id              String  @db.Uuid
+  order_item_id          String  @db.Uuid
+  modifier_id            String? @db.Uuid
+  modifier_name          String  @db.VarChar
+  unit_price_delta_minor BigInt
+  quantity               Int
+  total_minor            BigInt
+
+  order_item OrderItem @relation(fields: [order_item_id], references: [id], onDelete: Cascade)
+
+  @@index([order_item_id])
+  @@map("order_item_modifiers")
+}
+
+enum ActorType {
+  CUSTOMER
+  STAFF
+  RIDER
+  SYSTEM
+}
+
+model OrderStatusHistory {
+  id          String      @id @default(uuid()) @db.Uuid
+  tenant_id   String      @db.Uuid
+  order_id    String      @db.Uuid
+  from_status OrderStatus?
+  to_status   OrderStatus
+  actor_type  ActorType
+  actor_id    String?     @db.Uuid
+  reason_code String?     @db.VarChar
+  reason_text String?     @db.Text
+  source      String      @db.VarChar
+  created_at  DateTime    @default(now()) @db.Timestamptz
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([order_id])
+  @@map("order_status_history")
+}

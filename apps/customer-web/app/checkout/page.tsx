@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useCart } from '../../components/CartProvider';
 import { useRouter } from 'next/navigation';
 
@@ -11,6 +11,8 @@ export default function CheckoutPage() {
   const [error, setError] = useState('');
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [branchId, setBranchId] = useState(''); // Allow user to type a branch ID for demo
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const idempotencyKeyRef = useRef(typeof window !== 'undefined' ? crypto.randomUUID() : '');
 
   useEffect(() => {
     if (!isLoading && (!cart || !cart.items || cart.items.length === 0)) {
@@ -37,6 +39,32 @@ export default function CheckoutPage() {
       setError(err.message);
     } finally {
       setLoadingQuote(false);
+    }
+  };
+
+  const placeOrder = async () => {
+    if (!cart?.id || !branchId || !quote) return;
+    setPlacingOrder(true);
+    setError('');
+    try {
+      const res = await fetch('http://localhost:3001/v1/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cart_id: cart.id,
+          branch_id: branchId,
+          idempotency_key: idempotencyKeyRef.current,
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || 'Failed to place order');
+      }
+      const order = await res.json();
+      router.push(`/orders/${order.id}`);
+    } catch (err: any) {
+      setError(err.message);
+      setPlacingOrder(false);
     }
   };
 
@@ -111,8 +139,12 @@ export default function CheckoutPage() {
                   <span>Total</span>
                   <span>{quote.currency_code} {(quote.grand_total_minor / 100).toFixed(2)}</span>
                 </div>
-                <button className="w-full bg-green-600 text-white p-4 rounded-xl mt-6 hover:bg-green-700 font-semibold text-lg">
-                  Place Order
+                <button 
+                  onClick={placeOrder}
+                  disabled={placingOrder}
+                  className="w-full bg-green-600 text-white p-4 rounded-xl mt-6 hover:bg-green-700 font-semibold text-lg disabled:opacity-50"
+                >
+                  {placingOrder ? 'Placing Order...' : 'Place Order'}
                 </button>
               </div>
             ) : (

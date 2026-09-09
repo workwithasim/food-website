@@ -18,6 +18,7 @@ import { CatalogModule } from "./catalog/catalog.module";
 import { CartModule } from "./cart/cart.module";
 import { PricingModule } from "./pricing/pricing.module";
 import { CheckoutModule } from "./checkout/checkout.module";
+import { OrdersModule } from "./orders/orders.module";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerStorageRedisService } from "nestjs-throttler-storage-redis";
@@ -50,6 +51,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     CartModule,
     PricingModule,
     CheckoutModule,
+    OrdersModule,
   ],
   providers: [
     {
