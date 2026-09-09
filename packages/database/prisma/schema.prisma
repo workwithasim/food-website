@@ -40,6 +40,7 @@ model Tenant {
   products         Product[]
   modifier_groups  ModifierGroup[]
   idempotency_keys IdempotencyKey[]
+  audit_logs       AuditLog[]
 
   @@map("tenants")
 }
@@ -1292,4 +1293,27 @@ model CustomerAuditLog {
 
   @@index([tenant_id, customer_id, created_at(sort: Desc)])
   @@map("customer_audit_logs")
+}
+
+// ─── Reporting & Operational Audit ───────────────────────────────────────────
+
+model AuditLog {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenant_id   String    @db.Uuid
+  actor_id    String    @db.Uuid
+  actor_type  ActorType @default(STAFF)
+  action      String    @db.VarChar
+  entity_type String    @db.VarChar
+  entity_id   String    @db.VarChar
+  details     Json?     @db.JsonB
+  ip_address  String?   @db.VarChar
+  user_agent  String?   @db.VarChar
+  created_at  DateTime  @default(now()) @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, created_at(sort: Desc)])
+  @@index([tenant_id, entity_type, entity_id])
+  @@index([tenant_id, actor_id])
+  @@map("audit_logs")
 }

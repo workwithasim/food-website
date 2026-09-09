@@ -28,6 +28,8 @@ import { NotificationsModule } from "./notifications/notifications.module";
 import { PromotionsModule } from "./promotions/promotions.module";
 import { CmsModule } from "./cms/cms.module";
 import { CrmModule } from "./crm/crm.module";
+import { AuditModule } from "./audit/audit.module";
+import { ReportingModule } from "./reporting/reporting.module";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerStorageRedisService } from "nestjs-throttler-storage-redis";
@@ -70,6 +72,8 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     PromotionsModule,
     CmsModule,
     CrmModule,
+    AuditModule,
+    ReportingModule,
   ],
   providers: [
     {
