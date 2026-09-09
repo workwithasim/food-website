@@ -36,6 +36,8 @@ model Tenant {
   customers        Customer[]
   refresh_sessions RefreshSession[]
   otp_challenges   OtpChallenge[]
+  categories       Category[]
+  products         Product[]
 
   @@map("tenants")
 }
@@ -131,6 +133,7 @@ model Branch {
   special_hours    BranchSpecialHour[]
   delivery_zones   DeliveryZone[]
   user_assignments UserBranchAssignment[]
+  branch_products  BranchProduct[]
 
   @@unique([tenant_id, code])
   @@index([location], type: Gist)
@@ -354,3 +357,101 @@ model OtpChallenge {
   @@index([tenant_id, identifier])
   @@map("otp_challenges")
 }
+
+// ─── Catalog ─────────────────────────────────────────────────────────────────
+
+enum CatalogStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model Category {
+  id              String        @id @default(uuid()) @db.Uuid
+  tenant_id       String        @db.Uuid
+  parent_id       String?       @db.Uuid
+  name            String        @db.VarChar
+  slug            String        @db.VarChar
+  description     String?       @db.Text
+  image_url       String?       @db.VarChar
+  sort_order      Int           @default(0)
+  status          CatalogStatus @default(DRAFT)
+  available_from  DateTime?     @db.Timestamptz
+  available_until DateTime?     @db.Timestamptz
+  created_at      DateTime      @default(now()) @db.Timestamptz
+  updated_at      DateTime      @updatedAt @db.Timestamptz
+  deleted_at      DateTime?     @db.Timestamptz
+
+  tenant   Tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  parent   Category?  @relation("CategoryChildren", fields: [parent_id], references: [id])
+  children Category[] @relation("CategoryChildren")
+  products Product[]
+
+  @@unique([tenant_id, slug])
+  @@index([tenant_id, status])
+  @@map("categories")
+}
+
+model Product {
+  id                       String        @id @default(uuid()) @db.Uuid
+  tenant_id                String        @db.Uuid
+  category_id              String        @db.Uuid
+  name                     String        @db.VarChar
+  slug                     String        @db.VarChar
+  description              String?       @db.Text
+  base_price_minor         BigInt
+  currency_code            String        @db.Char(3)
+  status                   CatalogStatus @default(DRAFT)
+  preparation_time_minutes Int?
+  featured                 Boolean       @default(false)
+  metadata_json            Json?
+  created_at               DateTime      @default(now()) @db.Timestamptz
+  updated_at               DateTime      @updatedAt @db.Timestamptz
+  deleted_at               DateTime?     @db.Timestamptz
+
+  tenant        Tenant         @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  category      Category       @relation(fields: [category_id], references: [id])
+  media         ProductMedia[]
+  branch_overrides BranchProduct[]
+
+  @@unique([tenant_id, slug])
+  @@index([tenant_id, status, category_id])
+  @@index([tenant_id, featured])
+  @@map("products")
+}
+
+model ProductMedia {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenant_id  String   @db.Uuid
+  product_id String   @db.Uuid
+  media_url  String   @db.VarChar
+  alt_text   String?  @db.VarChar
+  sort_order Int      @default(0)
+  is_primary Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@index([product_id, sort_order])
+  @@map("product_media")
+}
+
+model BranchProduct {
+  tenant_id                  String    @db.Uuid
+  branch_id                  String    @db.Uuid
+  product_id                 String    @db.Uuid
+  enabled                    Boolean   @default(true)
+  sold_out                   Boolean   @default(false)
+  price_override_minor       BigInt?
+  preparation_time_override  Int?
+  available_from             DateTime? @db.Timestamptz
+  available_until            DateTime? @db.Timestamptz
+
+  branch  Branch  @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@id([tenant_id, branch_id, product_id])
+  @@index([tenant_id, branch_id, enabled])
+  @@map("branch_products")
+}
+

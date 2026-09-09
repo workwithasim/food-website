@@ -10,6 +10,10 @@ export enum Permission {
   // Catalog
   MANAGE_CATALOG = 'manage_catalog',
   VIEW_CATALOG = 'view_catalog',
+  MANAGE_CATEGORIES = 'manage_categories',
+  VIEW_CATEGORIES = 'view_categories',
+  MANAGE_PRODUCTS = 'manage_products',
+  VIEW_PRODUCTS = 'view_products',
 
   // Orders
   MANAGE_ORDERS = 'manage_orders',
