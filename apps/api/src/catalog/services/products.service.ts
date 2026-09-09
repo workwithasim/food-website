@@ -17,6 +17,7 @@ export interface CreateProductDto {
   preparation_time_minutes?: number;
   featured?: boolean;
   metadata_json?: object;
+  image_url?: string;
 }
 
 export interface AddMediaDto {
@@ -112,6 +113,26 @@ export class ProductsService extends TenantScopedRepository {
       },
       include: { media: true, category: true },
     });
+
+    if (dto.image_url) {
+      await this.db.productMedia.create({
+        data: {
+          id: randomUUID(),
+          tenant_id: this.tenantId,
+          product_id: product.id,
+          media_url: dto.image_url,
+          alt_text: product.name,
+          sort_order: 0,
+          is_primary: true,
+        },
+      });
+      const refreshed = await this.db.product.findUnique({
+        where: { id: product.id },
+        include: { media: true, category: true },
+      });
+      return this.serializeProduct(refreshed);
+    }
+
     return this.serializeProduct(product);
   }
 
@@ -123,6 +144,30 @@ export class ProductsService extends TenantScopedRepository {
         where: { tenant_id: this.tenantId, slug: dto.slug, deleted_at: null, NOT: { id } },
       });
       if (conflict) throw new ConflictException(`Slug "${dto.slug}" already in use`);
+    }
+
+    if (dto.image_url) {
+      const existingMedia = await this.db.productMedia.findFirst({
+        where: { product_id: id, tenant_id: this.tenantId },
+      });
+      if (existingMedia) {
+        await this.db.productMedia.update({
+          where: { id: existingMedia.id },
+          data: { media_url: dto.image_url },
+        });
+      } else {
+        await this.db.productMedia.create({
+          data: {
+            id: randomUUID(),
+            tenant_id: this.tenantId,
+            product_id: id,
+            media_url: dto.image_url,
+            alt_text: dto.name || 'Product Image',
+            sort_order: 0,
+            is_primary: true,
+          },
+        });
+      }
     }
 
     const product = await this.db.product.update({

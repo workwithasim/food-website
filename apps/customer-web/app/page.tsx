@@ -1,10 +1,13 @@
 import { Badge, Button } from "@restaurant/ui";
 import { ProductCard } from "../components/ProductCard";
 
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   let products = [];
   try {
-    const res = await fetch('http://localhost:3001/v1/catalog/products', { cache: 'no-store' });
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+    const res = await fetch(`${apiUrl}/v1/catalog/products`, { cache: 'no-store' });
     if (res.ok) {
       products = await res.json();
     }

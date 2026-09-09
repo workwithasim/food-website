@@ -30,10 +30,19 @@ export class TenantMiddleware implements NestMiddleware {
     }
 
     // Look up domain
-    const domain = await this.db.tenantDomain.findUnique({
+    let domain = await this.db.tenantDomain.findUnique({
       where: { hostname: cleanHostname },
       include: { tenant: true },
     });
+
+    if (!domain && (cleanHostname === 'localhost' || cleanHostname === '127.0.0.1' || cleanHostname === '0.0.0.0')) {
+      domain = await this.db.tenantDomain.findFirst({
+        where: { is_primary: true },
+        include: { tenant: true },
+      }) || await this.db.tenantDomain.findFirst({
+        include: { tenant: true },
+      });
+    }
 
     if (!domain) {
       throw new NotFoundException(`Unknown tenant domain: ${cleanHostname}`);
