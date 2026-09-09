@@ -17,15 +17,15 @@ enum TenantStatus {
 }
 
 model Tenant {
-  id               String             @id @default(uuid()) @db.Uuid
-  name             String             @db.VarChar
-  slug             String             @unique @db.VarChar
+  id               String       @id @default(uuid()) @db.Uuid
+  name             String       @db.VarChar
+  slug             String       @unique @db.VarChar
   status           TenantStatus
-  default_currency String             @db.Char(3)
-  default_locale   String             @db.VarChar
-  timezone         String             @db.VarChar
-  created_at       DateTime           @default(now()) @db.Timestamptz
-  updated_at       DateTime           @updatedAt @db.Timestamptz
+  default_currency String       @db.Char(3)
+  default_locale   String       @db.VarChar
+  timezone         String       @db.VarChar
+  created_at       DateTime     @default(now()) @db.Timestamptz
+  updated_at       DateTime     @updatedAt @db.Timestamptz
 
   domains          TenantDomain[]
   settings         TenantSettings?
@@ -33,6 +33,9 @@ model Tenant {
   branches         Branch[]
   memberships      TenantMembership[]
   roles            Role[]
+  customers        Customer[]
+  refresh_sessions RefreshSession[]
+  otp_challenges   OtpChallenge[]
 
   @@map("tenants")
 }
@@ -60,7 +63,7 @@ model TenantDomain {
   created_at              DateTime     @default(now()) @db.Timestamptz
   updated_at              DateTime     @updatedAt @db.Timestamptz
 
-  tenant                  Tenant       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
 
   @@unique([hostname])
   @@map("tenant_domains")
@@ -79,7 +82,7 @@ model TenantSettings {
   seo_json                Json     @db.JsonB
   updated_at              DateTime @updatedAt @db.Timestamptz
 
-  tenant                  Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
 
   @@map("tenant_settings")
 }
@@ -91,7 +94,7 @@ model TenantFeature {
   config_json Json?    @db.JsonB
   updated_at  DateTime @updatedAt @db.Timestamptz
 
-  tenant      Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
 
   @@id([tenant_id, feature_key])
   @@map("tenant_features")
@@ -123,11 +126,11 @@ model Branch {
   updated_at                 DateTime                             @updatedAt @db.Timestamptz
   deleted_at                 DateTime?                            @db.Timestamptz
 
-  tenant                     Tenant                               @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  hours                      BranchHour[]
-  special_hours              BranchSpecialHour[]
-  delivery_zones             DeliveryZone[]
-  user_assignments           UserBranchAssignment[]
+  tenant           Tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  hours            BranchHour[]
+  special_hours    BranchSpecialHour[]
+  delivery_zones   DeliveryZone[]
+  user_assignments UserBranchAssignment[]
 
   @@unique([tenant_id, code])
   @@index([location], type: Gist)
@@ -145,7 +148,7 @@ model BranchHour {
   crosses_midnight Boolean
   is_closed        Boolean
 
-  branch           Branch   @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branch_id], references: [id], onDelete: Cascade)
 
   @@map("branch_hours")
 }
@@ -160,7 +163,7 @@ model BranchSpecialHour {
   is_closed  Boolean
   reason     String?   @db.VarChar
 
-  branch     Branch    @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branch_id], references: [id], onDelete: Cascade)
 
   @@map("branch_special_hours")
 }
@@ -186,7 +189,7 @@ model DeliveryZone {
   priority           Int
   active             Boolean
 
-  branch             Branch                                       @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branch_id], references: [id], onDelete: Cascade)
 
   @@map("delivery_zones")
 }
@@ -198,14 +201,14 @@ enum UserStatus {
 }
 
 model User {
-  id                 String                 @id @default(uuid()) @db.Uuid
-  email              String?                @db.VarChar
-  phone              String?                @db.VarChar
-  password_hash      String?                @db.VarChar
-  display_name       String                 @db.VarChar
-  status             UserStatus
-  created_at         DateTime               @default(now()) @db.Timestamptz
-  updated_at         DateTime               @updatedAt @db.Timestamptz
+  id            String     @id @default(uuid()) @db.Uuid
+  email         String?    @db.VarChar
+  phone         String?    @db.VarChar
+  password_hash String?    @db.VarChar
+  display_name  String     @db.VarChar
+  status        UserStatus
+  created_at    DateTime   @default(now()) @db.Timestamptz
+  updated_at    DateTime   @updatedAt @db.Timestamptz
 
   memberships        TenantMembership[]
   branch_assignments UserBranchAssignment[]
@@ -226,20 +229,20 @@ model TenantMembership {
   status     MembershipStatus
   created_at DateTime         @default(now()) @db.Timestamptz
 
-  tenant     Tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  user       User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  roles      MembershipRole[]
+  tenant Tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user   User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  roles  MembershipRole[]
 
   @@unique([tenant_id, user_id])
   @@map("tenant_memberships")
 }
 
 model Role {
-  id          String           @id @default(uuid()) @db.Uuid
-  tenant_id   String?          @db.Uuid
-  key         String           @db.VarChar
-  name        String           @db.VarChar
-  is_system   Boolean
+  id        String  @id @default(uuid()) @db.Uuid
+  tenant_id String? @db.Uuid
+  key       String  @db.VarChar
+  name      String  @db.VarChar
+  is_system Boolean
 
   tenant      Tenant?          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   permissions RolePermission[]
@@ -249,32 +252,32 @@ model Role {
 }
 
 model Permission {
-  id          String           @id @default(uuid()) @db.Uuid
-  key         String           @unique @db.VarChar
-  description String           @db.VarChar
+  id          String @id @default(uuid()) @db.Uuid
+  key         String @unique @db.VarChar
+  description String @db.VarChar
 
-  roles       RolePermission[]
+  roles RolePermission[]
 
   @@map("permissions")
 }
 
 model RolePermission {
-  role_id       String     @db.Uuid
-  permission_id String     @db.Uuid
+  role_id       String @db.Uuid
+  permission_id String @db.Uuid
 
-  role          Role       @relation(fields: [role_id], references: [id], onDelete: Cascade)
-  permission    Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+  role       Role       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
 
   @@id([role_id, permission_id])
   @@map("role_permissions")
 }
 
 model MembershipRole {
-  membership_id String           @db.Uuid
-  role_id       String           @db.Uuid
+  membership_id String @db.Uuid
+  role_id       String @db.Uuid
 
-  membership    TenantMembership @relation(fields: [membership_id], references: [id], onDelete: Cascade)
-  role          Role             @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  membership TenantMembership @relation(fields: [membership_id], references: [id], onDelete: Cascade)
+  role       Role             @relation(fields: [role_id], references: [id], onDelete: Cascade)
 
   @@id([membership_id, role_id])
   @@map("membership_roles")
@@ -285,9 +288,69 @@ model UserBranchAssignment {
   user_id   String @db.Uuid
   branch_id String @db.Uuid
 
-  user      User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  branch    Branch @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branch_id], references: [id], onDelete: Cascade)
 
   @@id([tenant_id, user_id, branch_id])
   @@map("user_branch_assignments")
+}
+
+model Customer {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenant_id     String   @db.Uuid
+  first_name    String   @db.VarChar
+  last_name     String?  @db.VarChar
+  email         String?  @db.VarChar
+  phone         String?  @db.VarChar
+  password_hash String?  @db.VarChar
+  is_verified   Boolean  @default(false)
+  created_at    DateTime @default(now()) @db.Timestamptz
+  updated_at    DateTime @updatedAt @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, email])
+  @@unique([tenant_id, phone])
+  @@map("customers")
+}
+
+enum TokenType {
+  REFRESH
+}
+
+model RefreshSession {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenant_id   String   @db.Uuid
+  user_id     String?  @db.Uuid
+  customer_id String?  @db.Uuid
+  token_hash  String   @db.VarChar
+  expires_at  DateTime @db.Timestamptz
+  is_revoked  Boolean  @default(false)
+  user_agent  String?  @db.VarChar
+  ip_address  String?  @db.VarChar
+  created_at  DateTime @default(now()) @db.Timestamptz
+  updated_at  DateTime @updatedAt @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([token_hash])
+  @@index([user_id])
+  @@index([customer_id])
+  @@map("refresh_sessions")
+}
+
+model OtpChallenge {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenant_id   String   @db.Uuid
+  identifier  String   @db.VarChar // phone or email
+  otp_hash    String   @db.VarChar
+  attempts    Int      @default(0) @db.SmallInt
+  expires_at  DateTime @db.Timestamptz
+  is_verified Boolean  @default(false)
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, identifier])
+  @@map("otp_challenges")
 }

@@ -4,6 +4,13 @@ import { HealthModule } from "./health/health.module";
 import { DatabaseModule } from "./database/database.module";
 import { TenancyModule } from "./tenancy/tenancy.module";
 import { TenantMiddleware } from "./tenancy/tenant.middleware";
+import { AuthModule } from "./auth/auth.module";
+import { ThrottlerModule } from "@nestjs/throttler";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { ThrottlerStorageRedisService } from "nestjs-throttler-storage-redis";
+
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -11,9 +18,24 @@ import { TenantMiddleware } from "./tenancy/tenant.middleware";
       global: true,
       middleware: { mount: true },
     }),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [{ name: 'short', ttl: 1000, limit: 3 }, { name: 'long', ttl: 60000, limit: 100 }],
+        storage: new ThrottlerStorageRedisService(config.get<string>('REDIS_URL') as string || 'redis://localhost:6379'),
+      }),
+    }),
     HealthModule,
     DatabaseModule,
     TenancyModule,
+    AuthModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    }
   ]
 })
 export class AppModule {
