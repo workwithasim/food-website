@@ -27,6 +27,7 @@ import { ChatModule } from "./chat/chat.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { PromotionsModule } from "./promotions/promotions.module";
 import { CmsModule } from "./cms/cms.module";
+import { CrmModule } from "./crm/crm.module";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerStorageRedisService } from "nestjs-throttler-storage-redis";
@@ -68,6 +69,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     NotificationsModule,
     PromotionsModule,
     CmsModule,
+    CrmModule,
   ],
   providers: [
     {

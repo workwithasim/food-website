@@ -139,6 +139,7 @@ model Branch {
   rider_profiles   RiderProfile[]
   cod_ledgers      CodLedger[]
   promotionRules   PromotionRule[]
+  reviews          OrderReview[]
 
   @@unique([tenant_id, code])
   @@index([location], type: Gist)
@@ -310,18 +311,27 @@ model UserBranchAssignment {
 }
 
 model Customer {
-  id            String   @id @default(uuid()) @db.Uuid
-  tenant_id     String   @db.Uuid
-  first_name    String   @db.VarChar
-  last_name     String?  @db.VarChar
-  email         String?  @db.VarChar
-  phone         String?  @db.VarChar
-  password_hash String?  @db.VarChar
-  is_verified   Boolean  @default(false)
-  created_at    DateTime @default(now()) @db.Timestamptz
-  updated_at    DateTime @updatedAt @db.Timestamptz
+  id                 String    @id @default(uuid()) @db.Uuid
+  tenant_id          String    @db.Uuid
+  first_name         String    @db.VarChar
+  last_name          String?   @db.VarChar
+  email              String?   @db.VarChar
+  phone              String?   @db.VarChar
+  password_hash      String?   @db.VarChar
+  is_verified        Boolean   @default(false)
+  is_blocked         Boolean   @default(false)
+  blocked_reason     String?   @db.VarChar
+  blocked_at         DateTime? @db.Timestamptz
+  blocked_by_user_id String?   @db.Uuid
+  created_at         DateTime  @default(now()) @db.Timestamptz
+  updated_at         DateTime  @updatedAt @db.Timestamptz
 
-  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant          Tenant                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tags            CustomerTagAssignment[]
+  favorites       CustomerFavorite[]
+  reviews         OrderReview[]
+  support_tickets SupportTicket[]
+  audit_logs      CustomerAuditLog[]
 
   @@unique([tenant_id, email])
   @@unique([tenant_id, phone])
@@ -427,6 +437,7 @@ model Product {
   variants         ProductVariant[]
   modifier_groups  ProductModifierGroup[]
   cartItems        CartItem[]
+  favorites        CustomerFavorite[]
 
   @@unique([tenant_id, slug])
   @@index([tenant_id, status, category_id])
@@ -705,6 +716,8 @@ model Order {
   chat_threads        ChatThread[]
   notification_events NotificationEvent[]
   orderPromotions     OrderPromotion[]
+  review              OrderReview?
+  support_tickets     SupportTicket[]
 
   @@unique([tenant_id, order_number])
   @@index([tenant_id, branch_id, status, created_at(sort: Desc)])
@@ -1137,4 +1150,146 @@ model Banner {
 
   @@index([tenant_id, is_active])
   @@map("banners")
+}
+
+// ─── CRM, Reviews & Support ──────────────────────────────────────────────────
+
+model CustomerTag {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenant_id  String   @db.Uuid
+  name       String   @db.VarChar
+  color      String?  @db.VarChar
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  assignments CustomerTagAssignment[]
+
+  @@unique([tenant_id, name])
+  @@index([tenant_id])
+  @@map("customer_tags")
+}
+
+model CustomerTagAssignment {
+  id          String   @id @default(uuid()) @db.Uuid
+  tag_id      String   @db.Uuid
+  customer_id String   @db.Uuid
+  assigned_at DateTime @default(now()) @db.Timestamptz
+
+  tag      CustomerTag @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+  customer Customer    @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+
+  @@unique([tag_id, customer_id])
+  @@index([customer_id])
+  @@map("customer_tag_assignments")
+}
+
+model CustomerFavorite {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenant_id   String   @db.Uuid
+  customer_id String   @db.Uuid
+  product_id  String   @db.Uuid
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  customer Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@unique([customer_id, product_id])
+  @@index([tenant_id, customer_id])
+  @@map("customer_favorites")
+}
+
+model OrderReview {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenant_id    String   @db.Uuid
+  order_id     String   @unique @db.Uuid
+  customer_id  String   @db.Uuid
+  branch_id    String   @db.Uuid
+  food_rating  Int      @db.SmallInt
+  rider_rating Int?     @db.SmallInt
+  comment      String?  @db.Text
+  created_at   DateTime @default(now()) @db.Timestamptz
+  updated_at   DateTime @updatedAt @db.Timestamptz
+
+  order    Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  branch   Branch   @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, branch_id])
+  @@index([tenant_id, customer_id])
+  @@map("order_reviews")
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TicketSenderType {
+  CUSTOMER
+  STAFF
+}
+
+model SupportTicket {
+  id          String         @id @default(uuid()) @db.Uuid
+  tenant_id   String         @db.Uuid
+  customer_id String         @db.Uuid
+  order_id    String?        @db.Uuid
+  subject     String         @db.VarChar
+  status      TicketStatus   @default(OPEN)
+  priority    TicketPriority @default(NORMAL)
+  created_at  DateTime       @default(now()) @db.Timestamptz
+  updated_at  DateTime       @updatedAt @db.Timestamptz
+
+  customer Customer               @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  order    Order?                 @relation(fields: [order_id], references: [id], onDelete: SetNull)
+  messages SupportTicketMessage[]
+
+  @@index([tenant_id, status])
+  @@index([tenant_id, customer_id])
+  @@map("support_tickets")
+}
+
+model SupportTicketMessage {
+  id          String           @id @default(uuid()) @db.Uuid
+  ticket_id   String           @db.Uuid
+  sender_type TicketSenderType
+  sender_id   String           @db.Uuid
+  message     String           @db.Text
+  created_at  DateTime         @default(now()) @db.Timestamptz
+
+  ticket SupportTicket @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
+
+  @@index([ticket_id, created_at])
+  @@map("support_ticket_messages")
+}
+
+enum CustomerAuditAction {
+  BLOCK
+  UNBLOCK
+  VIEW_PII
+  UPDATE_METADATA
+}
+
+model CustomerAuditLog {
+  id          String              @id @default(uuid()) @db.Uuid
+  tenant_id   String              @db.Uuid
+  customer_id String              @db.Uuid
+  actor_id    String              @db.Uuid
+  action      CustomerAuditAction
+  reason      String?             @db.VarChar
+  metadata    Json?               @db.JsonB
+  created_at  DateTime            @default(now()) @db.Timestamptz
+
+  customer Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, customer_id, created_at(sort: Desc)])
+  @@map("customer_audit_logs")
 }
