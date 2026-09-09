@@ -1,6 +1,7 @@
 import { Worker, Job } from "bullmq";
 import Redis from "ioredis";
 import { appLogger } from "@restaurant/observability";
+import { handleNotificationJob } from "./notifications/notifications.processor";
 
 export interface WorkerConfig {
   redisUrl: string;
@@ -36,6 +37,9 @@ export class BackgroundWorker {
       this.queueName,
       async (job: Job) => {
         appLogger.info(`Processing job ${job.id} [${job.name}]`);
+        if (job.name === 'process_outbox_event') {
+          return handleNotificationJob(job);
+        }
         return { processed: true, jobId: job.id };
       },
       {

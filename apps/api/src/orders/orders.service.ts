@@ -155,6 +155,18 @@ export class OrdersService extends TenantScopedRepository {
         }
       });
 
+      // Outbox Event
+      await tx.outboxEvent.create({
+        data: {
+          tenant_id: this.tenantId,
+          aggregate_type: 'Order',
+          aggregate_id: order.id,
+          event_type: 'ORDER_PLACED',
+          payload: { order_id: order.id, status: 'PLACED' },
+          status: 'PENDING'
+        }
+      });
+
       // Disable Cart
       await tx.cart.update({
         where: { id: cart.id },

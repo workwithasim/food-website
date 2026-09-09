@@ -853,3 +853,28 @@ model Refund {
   @@index([payment_id])
   @@map("refunds")
 }
+
+// ─── Realtime & Outbox ───────────────────────────────────────────────────────
+
+enum OutboxEventStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+model OutboxEvent {
+  id             String            @id @default(uuid()) @db.Uuid
+  tenant_id      String            @db.Uuid
+  aggregate_type String            @db.VarChar
+  aggregate_id   String            @db.VarChar
+  event_type     String            @db.VarChar
+  payload        Json              @db.JsonB
+  status         OutboxEventStatus @default(PENDING)
+  error          String?           @db.Text
+  created_at     DateTime          @default(now()) @db.Timestamptz
+  processed_at   DateTime?         @db.Timestamptz
+
+  @@index([status, created_at(sort: Asc)])
+  @@index([tenant_id])
+  @@map("outbox_events")
+}
