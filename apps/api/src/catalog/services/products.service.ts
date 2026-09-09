@@ -44,7 +44,11 @@ export class ProductsService extends TenantScopedRepository {
         ...(filters?.status && { status: filters.status }),
         ...(filters?.featured !== undefined && { featured: filters.featured }),
       },
-      include: { media: { orderBy: { sort_order: 'asc' } }, category: true },
+      include: { 
+        media: { orderBy: { sort_order: 'asc' } }, 
+        category: true,
+        variants: { where: { status: 'ACTIVE' }, orderBy: { sort_order: 'asc' } }
+      },
       orderBy: { created_at: 'asc' },
     });
   }
@@ -63,7 +67,21 @@ export class ProductsService extends TenantScopedRepository {
   async getProductBySlug(slug: string) {
     const product = await this.db.product.findUnique({
       where: { tenant_id_slug: { tenant_id: this.tenantId, slug } },
-      include: { media: { orderBy: { sort_order: 'asc' } }, category: true },
+      include: { 
+        media: { orderBy: { sort_order: 'asc' } }, 
+        category: true,
+        variants: { where: { status: 'ACTIVE' }, orderBy: { sort_order: 'asc' } },
+        modifier_groups: {
+          orderBy: { sort_order: 'asc' },
+          include: {
+            modifier_group: {
+              include: {
+                modifiers: { where: { status: 'ACTIVE' }, orderBy: { sort_order: 'asc' } }
+              }
+            }
+          }
+        }
+      },
     });
     if (!product || product.deleted_at || product.status !== 'ACTIVE') {
       throw new NotFoundException('Product not found');

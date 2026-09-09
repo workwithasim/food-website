@@ -1,40 +1,48 @@
-import { Button, Card, Badge } from "@restaurant/ui";
+import { Badge, Button } from "@restaurant/ui";
+import { ProductCard } from "../components/ProductCard";
 
-export default function HomePage() {
+export default async function HomePage() {
+  let products = [];
+  try {
+    const res = await fetch('http://localhost:3001/v1/catalog/products', { cache: 'no-store' });
+    if (res.ok) {
+      products = await res.json();
+    }
+  } catch (err) {
+    console.error("Failed to fetch products:", err);
+  }
+
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px" }}>
-      <section style={{ textAlign: "center", marginBottom: 48 }}>
-        <Badge variant="default" style={{ marginBottom: 12 }}>White-Label Customer Web</Badge>
-        <h1 style={{ fontSize: "2.5rem", fontWeight: 800, margin: "12px 0", color: "var(--color-text)" }}>
+    <div className="space-y-12 pb-12">
+      <section className="text-center bg-white rounded-3xl p-12 shadow-sm border mt-4">
+        <Badge variant="default" className="mb-4">White-Label Customer Web</Badge>
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 mb-4">
           Delicious Food, Delivered Fast.
         </h1>
-        <p style={{ fontSize: "1.125rem", color: "var(--color-text-muted)", maxWidth: 600, margin: "0 auto 24px auto" }}>
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
           Explore our menu, customize your favorite meals, and track your orders in real time.
         </p>
-        <Button size="lg" variant="primary">
+        <Button size="lg" variant="primary" className="rounded-full px-8">
           Start Ordering
         </Button>
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
-        <Card padding="md">
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: 8 }}>Multi-Branch Delivery</h2>
-          <p style={{ color: "var(--color-text-muted)", fontSize: "0.9375rem" }}>
-            Automated location resolution routes orders to your nearest branch with accurate delivery zones.
-          </p>
-        </Card>
-        <Card padding="md">
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: 8 }}>Dynamic Menus</h2>
-          <p style={{ color: "var(--color-text-muted)", fontSize: "0.9375rem" }}>
-            Rich variants, modifier groups, and branch-level inventory control built right in.
-          </p>
-        </Card>
-        <Card padding="md">
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: 8 }}>Real-Time Tracking</h2>
-          <p style={{ color: "var(--color-text-muted)", fontSize: "0.9375rem" }}>
-            Live status from kitchen preparation to rider handoff and delivery.
-          </p>
-        </Card>
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Our Menu</h2>
+        </div>
+        
+        {products.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {products.map((product: any) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-white rounded-xl border border-dashed">
+            <p className="text-gray-500">No products available at the moment.</p>
+          </div>
+        )}
       </section>
     </div>
   );
