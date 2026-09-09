@@ -724,6 +724,7 @@ model Order {
   @@index([tenant_id, branch_id, status, created_at(sort: Desc)])
   @@index([tenant_id, customer_id, created_at(sort: Desc)])
   @@index([tenant_id, payment_status, created_at(sort: Desc)])
+  @@index([tenant_id, created_at(sort: Desc)])
   @@map("orders")
 }
 

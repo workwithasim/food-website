@@ -8,10 +8,18 @@ import * as dotenv from "dotenv";
 
 dotenv.config({ path: "../../.env" });
 
+import helmet from "helmet";
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    cors: true
+  const app = await NestFactory.create(AppModule);
+
+  app.use(helmet());
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
   });
+
 
   const redisIoAdapter = new RedisIoAdapter(app);
   await redisIoAdapter.connectToRedis();
