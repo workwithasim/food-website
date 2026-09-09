@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] — 2026-09-10 🛡️ Repository Hardening & Fixes
+
+### 🔒 Security & Repository
+- Added `SECURITY.md` detailing responsible disclosure policy and core security safeguards.
+- Added modern GitHub Issue Templates (`bug_report.yml`, `feature_request.yml`, `config.yml`).
+- Added comprehensive `.github/pull_request_template.md` with security and QA checklists.
+- Added automated `.github/workflows/release.yml` for GitHub Releases on version tags.
+
+### 🐛 Bug Fixes
+- Aligned `@nestjs/websockets` and `@nestjs/platform-socket.io` to `^11.2.3` to resolve package version mismatches.
+- Added `@Global()` decorator to `AuthModule` and imported into `AuditModule` to ensure global dependency resolution for `JwtAuthGuard`.
+- Added `test:unit` and `test:all` npm scripts to `apps/api/package.json` to ensure continuous integration compatibility.
+
+---
+
 ## [1.0.0] — 2026-09-10 🎉 Production Launch
 
 ### ✨ New — Full Platform (Phases 00–25)
