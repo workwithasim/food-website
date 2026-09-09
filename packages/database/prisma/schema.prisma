@@ -39,6 +39,7 @@ model Tenant {
   categories       Category[]
   products         Product[]
   modifier_groups  ModifierGroup[]
+  idempotency_keys IdempotencyKey[]
 
   @@map("tenants")
 }
@@ -597,4 +598,24 @@ model CartItemModifier {
 
   @@index([cart_item_id])
   @@map("cart_item_modifiers")
+}
+
+// ─── Idempotency ──────────────────────────────────────────────────────────────
+
+model IdempotencyKey {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenant_id       String   @db.Uuid
+  actor_scope     String   @db.VarChar
+  operation       String   @db.VarChar
+  idempotency_key String   @db.VarChar
+  response_body   Json?    @db.JsonB
+  status          String   @default("IN_PROGRESS") @db.VarChar
+  created_at      DateTime @default(now()) @db.Timestamptz
+  updated_at      DateTime @updatedAt @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, actor_scope, operation, idempotency_key])
+  @@index([created_at])
+  @@map("idempotency_keys")
 }
