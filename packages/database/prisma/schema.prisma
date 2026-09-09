@@ -1,0 +1,293 @@
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis()]
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  TRIAL
+  CLOSED
+}
+
+model Tenant {
+  id               String             @id @default(uuid()) @db.Uuid
+  name             String             @db.VarChar
+  slug             String             @unique @db.VarChar
+  status           TenantStatus
+  default_currency String             @db.Char(3)
+  default_locale   String             @db.VarChar
+  timezone         String             @db.VarChar
+  created_at       DateTime           @default(now()) @db.Timestamptz
+  updated_at       DateTime           @updatedAt @db.Timestamptz
+
+  domains          TenantDomain[]
+  settings         TenantSettings?
+  features         TenantFeature[]
+  branches         Branch[]
+  memberships      TenantMembership[]
+  roles            Role[]
+
+  @@map("tenants")
+}
+
+enum DomainType {
+  SUBDOMAIN
+  CUSTOM
+}
+
+enum DomainStatus {
+  PENDING
+  VERIFIED
+  FAILED
+}
+
+model TenantDomain {
+  id                      String       @id @default(uuid()) @db.Uuid
+  tenant_id               String       @db.Uuid
+  hostname                String       @db.VarChar
+  type                    DomainType
+  status                  DomainStatus
+  is_primary              Boolean
+  verification_token_hash String?      @db.VarChar
+  verified_at             DateTime?    @db.Timestamptz
+  created_at              DateTime     @default(now()) @db.Timestamptz
+  updated_at              DateTime     @updatedAt @db.Timestamptz
+
+  tenant                  Tenant       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([hostname])
+  @@map("tenant_domains")
+}
+
+model TenantSettings {
+  tenant_id               String   @id @db.Uuid
+  restaurant_display_name String   @db.VarChar
+  support_phone           String?  @db.VarChar
+  support_email           String?  @db.VarChar
+  order_prefix            String   @db.VarChar
+  logo_media_id           String?  @db.Uuid
+  theme_json              Json     @db.JsonB
+  checkout_json           Json     @db.JsonB
+  notification_json       Json     @db.JsonB
+  seo_json                Json     @db.JsonB
+  updated_at              DateTime @updatedAt @db.Timestamptz
+
+  tenant                  Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@map("tenant_settings")
+}
+
+model TenantFeature {
+  tenant_id   String   @db.Uuid
+  feature_key String   @db.VarChar
+  enabled     Boolean
+  config_json Json?    @db.JsonB
+  updated_at  DateTime @updatedAt @db.Timestamptz
+
+  tenant      Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@id([tenant_id, feature_key])
+  @@map("tenant_features")
+}
+
+enum BranchStatus {
+  ACTIVE
+  PAUSED
+  CLOSED
+}
+
+model Branch {
+  id                         String                               @id @default(uuid()) @db.Uuid
+  tenant_id                  String                               @db.Uuid
+  name                       String                               @db.VarChar
+  code                       String                               @db.VarChar
+  status                     BranchStatus
+  phone                      String?                              @db.VarChar
+  address_line               String                               @db.VarChar
+  city                       String                               @db.VarChar
+  timezone                   String                               @db.VarChar
+  location                   Unsupported("geography(Point,4326)")
+  min_order_minor            BigInt?
+  default_delivery_fee_minor BigInt?
+  accepts_delivery           Boolean
+  accepts_pickup             Boolean
+  preparation_time_minutes   Int?
+  created_at                 DateTime                             @default(now()) @db.Timestamptz
+  updated_at                 DateTime                             @updatedAt @db.Timestamptz
+  deleted_at                 DateTime?                            @db.Timestamptz
+
+  tenant                     Tenant                               @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  hours                      BranchHour[]
+  special_hours              BranchSpecialHour[]
+  delivery_zones             DeliveryZone[]
+  user_assignments           UserBranchAssignment[]
+
+  @@unique([tenant_id, code])
+  @@index([location], type: Gist)
+  @@index([tenant_id, status])
+  @@map("branches")
+}
+
+model BranchHour {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenant_id        String   @db.Uuid
+  branch_id        String   @db.Uuid
+  day_of_week      Int      @db.SmallInt
+  open_time        DateTime @db.Time
+  close_time       DateTime @db.Time
+  crosses_midnight Boolean
+  is_closed        Boolean
+
+  branch           Branch   @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+
+  @@map("branch_hours")
+}
+
+model BranchSpecialHour {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenant_id  String    @db.Uuid
+  branch_id  String    @db.Uuid
+  date       DateTime  @db.Date
+  open_time  DateTime? @db.Time
+  close_time DateTime? @db.Time
+  is_closed  Boolean
+  reason     String?   @db.VarChar
+
+  branch     Branch    @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+
+  @@map("branch_special_hours")
+}
+
+enum ZoneType {
+  RADIUS
+  POLYGON
+  AREA_CODE
+}
+
+model DeliveryZone {
+  id                 String                                       @id @default(uuid()) @db.Uuid
+  tenant_id          String                                       @db.Uuid
+  branch_id          String                                       @db.Uuid
+  name               String                                       @db.VarChar
+  zone_type          ZoneType
+  polygon            Unsupported("geography(MultiPolygon,4326)")?
+  radius_meters      Int?
+  center             Unsupported("geography(Point,4326)")?
+  area_codes         String[]
+  delivery_fee_minor BigInt
+  min_order_minor    BigInt?
+  priority           Int
+  active             Boolean
+
+  branch             Branch                                       @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+
+  @@map("delivery_zones")
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+model User {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  email              String?                @db.VarChar
+  phone              String?                @db.VarChar
+  password_hash      String?                @db.VarChar
+  display_name       String                 @db.VarChar
+  status             UserStatus
+  created_at         DateTime               @default(now()) @db.Timestamptz
+  updated_at         DateTime               @updatedAt @db.Timestamptz
+
+  memberships        TenantMembership[]
+  branch_assignments UserBranchAssignment[]
+
+  @@map("users")
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+model TenantMembership {
+  id         String           @id @default(uuid()) @db.Uuid
+  tenant_id  String           @db.Uuid
+  user_id    String           @db.Uuid
+  status     MembershipStatus
+  created_at DateTime         @default(now()) @db.Timestamptz
+
+  tenant     Tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  roles      MembershipRole[]
+
+  @@unique([tenant_id, user_id])
+  @@map("tenant_memberships")
+}
+
+model Role {
+  id          String           @id @default(uuid()) @db.Uuid
+  tenant_id   String?          @db.Uuid
+  key         String           @db.VarChar
+  name        String           @db.VarChar
+  is_system   Boolean
+
+  tenant      Tenant?          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  memberships MembershipRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(uuid()) @db.Uuid
+  key         String           @unique @db.VarChar
+  description String           @db.VarChar
+
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  role_id       String     @db.Uuid
+  permission_id String     @db.Uuid
+
+  role          Role       @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  permission    Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@id([role_id, permission_id])
+  @@map("role_permissions")
+}
+
+model MembershipRole {
+  membership_id String           @db.Uuid
+  role_id       String           @db.Uuid
+
+  membership    TenantMembership @relation(fields: [membership_id], references: [id], onDelete: Cascade)
+  role          Role             @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@id([membership_id, role_id])
+  @@map("membership_roles")
+}
+
+model UserBranchAssignment {
+  tenant_id String @db.Uuid
+  user_id   String @db.Uuid
+  branch_id String @db.Uuid
+
+  user      User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  branch    Branch @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+
+  @@id([tenant_id, user_id, branch_id])
+  @@map("user_branch_assignments")
+}
