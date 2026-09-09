@@ -1,4 +1,10 @@
 import { Module, MiddlewareConsumer, RequestMethod } from "@nestjs/common";
+
+if (!(BigInt.prototype as any).toJSON) {
+  (BigInt.prototype as any).toJSON = function () {
+    return Number(this);
+  };
+}
 import { ClsModule } from "nestjs-cls";
 import { HealthModule } from "./health/health.module";
 import { DatabaseModule } from "./database/database.module";
@@ -7,6 +13,7 @@ import { TenantMiddleware } from "./tenancy/tenant.middleware";
 import { AuthModule } from "./auth/auth.module";
 import { RbacModule } from "./rbac/rbac.module";
 import { StaffModule } from "./staff/staff.module";
+import { BranchesModule } from "./branches/branches.module";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ThrottlerStorageRedisService } from "nestjs-throttler-storage-redis";
@@ -34,6 +41,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
     AuthModule,
     RbacModule,
     StaffModule,
+    BranchesModule,
   ],
   providers: [
     {
