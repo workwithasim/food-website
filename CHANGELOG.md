@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] — 2026-09-10 🍕 Cheezious Customer Storefront Replatforming
+
+### 🎨 Storefront UX/UI (Cheezious Theme)
+- Replatformed `apps/customer-web` with Cheezious design system (`#F15B25` flame orange, `#FFC107` amber, rounded 3xl cards, and modern typography).
+- Added dynamic hero promotional banners carousel auto-fetching from `/api/v1/cms/public/banners`.
+- Added sticky horizontal category anchor bar with smooth section scroll-spy.
+- Added top bar header with Delivery vs. Pickup toggle, location selector modal, phone OTP auth modal, and animated cart pill.
+- Added interactive Product Customization & Add-ons modal (`ProductModal.tsx`) with radio size selection, crust options, multi-select checkboxes, and dynamic live price calculations.
+- Added slide-out cart drawer (`CartSidebar.tsx`) with itemized modifier chips, promo code validation (`CHEEZY10`), dynamic delivery fees, and Checkout CTA.
+- Added `/checkout` flow with customer delivery details and payment options (Cash on Delivery, Card on Delivery, Digital Wallet).
+- Added `/orders/[id]` real-time 5-step visual order tracking stepper (`Order Placed` ➔ `Confirmed` ➔ `In the Kitchen` ➔ `Out for Delivery` ➔ `Delivered`).
+
+### 🗄️ Backend API & Database Hardening
+- Populated complete authentic Cheezious menu seed (`packages/database/prisma/seed-cheezious-catalog.ts`) with 4 banners, 8 categories, 17 items, and modifier groups.
+- Enhanced `CartService.getCart` to eagerly include product media, variants, and modifier relations.
+- Implemented robust BigInt price serialization across `ProductsService`, `CartService`, and `OrdersService` preventing JSON serialization errors.
+- Enhanced `OrdersService.getOrder` to safely support lookup by either internal UUID or human-readable `order_number` (`ORD-...`).
+- Normalized API routing across checkout and order endpoints.
+
+---
+
 ## [1.0.1] — 2026-09-10 🛡️ Repository Hardening & Fixes
 
 ### 🔒 Security & Repository

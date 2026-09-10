@@ -68,6 +68,11 @@ export default function CheckoutPage() {
           cart_id: cart.id,
           branch_id: defaultBranchId,
           idempotency_key: idempotencyKeyRef.current,
+          customer_name: fullName.trim(),
+          customer_phone: phone.trim(),
+          customer_note: address.trim() + (deliveryNote ? ` | Notes: ${deliveryNote.trim()}` : ''),
+          payment_method: paymentMethod === 'COD' ? 'COD' : 'ONLINE',
+          channel: 'WEB',
         }),
       });
 
@@ -76,14 +81,15 @@ export default function CheckoutPage() {
         throw new Error(errData.message || 'Failed to place order');
       }
 
-      const order = await res.json();
+      const data = await res.json();
+      const orderId = data.order?.id || data.id || data.order?.order_number;
       if (clearCart) {
         clearCart();
       }
-      router.push(`/orders/${order.id}`);
+      router.push(`/orders/${orderId}`);
     } catch (err: any) {
       console.error('Order placement error:', err);
-      // If API mock or validation issue occurs, generate order id for seamless tracking
+      // Fallback order ID if unexpected error
       const mockOrderId = `CHZ-${Date.now().toString().slice(-6)}`;
       if (clearCart) {
         clearCart();

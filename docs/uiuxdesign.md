@@ -1073,3 +1073,50 @@ No screen is considered design-complete if only the happy path is designed.
 - Admin actions clearly show tenant/branch context.
 - Permission denial is handled cleanly.
 - English and RTL layout can be supported without redesigning the component tree.
+
+---
+
+# 40. Cheezious Storefront UI/UX Specification
+
+### 40.1 Brand Tokens & Styling
+- **Primary Brand Color**: `#F15B25` (Cheezious Flame Orange)
+- **Secondary Accent**: `#FFC107` (Warm Amber Gold)
+- **Background Layer**: `#F8F9FA` (Soft warm neutral)
+- **Card Background**: `#FFFFFF` with rounded-3xl (`border-radius: 1.5rem`) and soft elevation `shadow-xs` / `shadow-md` on hover.
+- **Typography**: Modern Inter font, bold/black heading weights (700/900).
+
+### 40.2 Component Hierarchy & Layout
+1. **Top Bar Header (`Header.tsx`)**:
+   - Left: Navigation drawer toggle + Cheezious brand badge.
+   - Center: Delivery vs. Pickup pill toggle with branch selector modal.
+   - Right: Live search input, phone OTP login button, and interactive cart badge with live quantity and subtotal.
+2. **Hero Promo Carousel (`BannerCarousel.tsx`)**:
+   - 16:9 / 21:9 responsive ratio with auto-slide timer and dot indicators.
+   - Dynamic data loaded from `/api/v1/cms/public/banners`.
+3. **Category Navigation Bar (`CategoryNav.tsx`)**:
+   - Sticky top bar with horizontal scrollable pill buttons.
+   - Smooth anchor scrolling to category sections (*Somewhat Local*, *Pizza Deals*, *Cheezy Treats*, *Thin Crust Pizza*, *Burgers*, *Sides*, *Desserts*, *Beverages*).
+4. **Product Card Grid (`ProductCard.tsx`)**:
+   - 4:3 high-resolution food photography.
+   - Wishlist favorite heart toggle.
+   - Item name, short ingredient description, starting price, and prominent `+ ADD TO CART` CTA.
+5. **Interactive Customization Dialog (`ProductModal.tsx`)**:
+   - Modal backdrop with smooth zoom-in animation.
+   - Variant selection (Sizes) with required validation.
+   - Modifier groups (Crust options, Add-on cheeses, dips, fries, drinks) with single-choice radio vs. multi-select checkbox controls.
+   - Real-time dynamic pricing calculation updating instantly as modifiers are clicked.
+   - Quantity stepper and `Add to Cart • PKR [Total]` action button.
+6. **Slide-Out Cart Drawer (`CartSidebar.tsx`)**:
+   - Slide-over drawer with itemized modifier chips.
+   - Live quantity controls (+ / - / delete).
+   - Promo coupon validation (`CHEEZY10`).
+   - Dynamic delivery fee calculation (Free above PKR 2,000).
+   - Sticky `Proceed to Checkout` button.
+7. **Checkout Experience (`app/checkout/page.tsx`)**:
+   - Multi-step customer delivery input (Name, Phone, Street address, Instructions).
+   - Payment method toggle (Cash on Delivery, Card on Delivery, Digital Wallet).
+   - Itemized order breakdown and total calculation.
+8. **5-Step Visual Order Tracking Stepper (`app/orders/[id]/page.tsx`)**:
+   - 5 visual steps: `Order Placed` ➔ `Confirmed` ➔ `In the Kitchen` ➔ `Out for Delivery` ➔ `Delivered`.
+   - Live delivery ETA countdown, rider details card, item summary, and phone support hotline (`051 111 446 699`).
+

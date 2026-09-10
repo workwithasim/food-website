@@ -191,12 +191,46 @@ export class OrdersService extends TenantScopedRepository {
       dto.payment_method || 'ONLINE'
     );
 
-    return { order: result, payment: paymentResult };
+    return { order: this.serializeOrder(result), payment: paymentResult };
+  }
+
+  private isValidUuid(str: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  }
+
+  private serializeOrder(order: any) {
+    if (!order) return null;
+    return {
+      ...order,
+      subtotal_minor: order.subtotal_minor != null ? Number(order.subtotal_minor) : 0,
+      tax_minor: order.tax_minor != null ? Number(order.tax_minor) : 0,
+      delivery_fee_minor: order.delivery_fee_minor != null ? Number(order.delivery_fee_minor) : 0,
+      service_fee_minor: order.service_fee_minor != null ? Number(order.service_fee_minor) : 0,
+      grand_total_minor: order.grand_total_minor != null ? Number(order.grand_total_minor) : 0,
+      items: (order.items || []).map((item: any) => ({
+        ...item,
+        unit_price_minor: item.unit_price_minor != null ? Number(item.unit_price_minor) : 0,
+        line_subtotal_minor: item.line_subtotal_minor != null ? Number(item.line_subtotal_minor) : 0,
+        line_total_minor: item.line_total_minor != null ? Number(item.line_total_minor) : 0,
+        modifiers: (item.modifiers || []).map((m: any) => ({
+          ...m,
+          unit_price_delta_minor: m.unit_price_delta_minor != null ? Number(m.unit_price_delta_minor) : 0,
+          total_minor: m.total_minor != null ? Number(m.total_minor) : 0,
+        }))
+      }))
+    };
   }
 
   async getOrder(orderId: string) {
-    return this.db.order.findFirst({
-      where: { id: orderId, tenant_id: this.tenantId },
+    const whereClause: any = { tenant_id: this.tenantId };
+    if (this.isValidUuid(orderId)) {
+      whereClause.OR = [{ id: orderId }, { order_number: orderId }];
+    } else {
+      whereClause.order_number = orderId;
+    }
+
+    const order = await this.db.order.findFirst({
+      where: whereClause,
       include: {
         items: {
           include: { modifiers: true }
@@ -206,13 +240,16 @@ export class OrdersService extends TenantScopedRepository {
         }
       }
     });
+
+    return this.serializeOrder(order);
   }
 
   async getCustomerHistory(customerId?: string) {
     if (!customerId) return [];
-    return this.db.order.findMany({
+    const orders = await this.db.order.findMany({
       where: { tenant_id: this.tenantId, customer_id: customerId },
       orderBy: { created_at: 'desc' }
     });
+    return orders.map(o => this.serializeOrder(o));
   }
 }

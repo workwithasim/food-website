@@ -98,12 +98,36 @@ pnpm --filter @restaurant/database db:seed
 pnpm dev
 ```
 
-| Service | URL |
-|---------|-----|
-| API | http://localhost:4000 |
-| API Docs (Swagger) | http://localhost:4000/api/docs |
-| Customer Web | http://localhost:3000 |
-| Ops Web | http://localhost:3001 |
+| Service | URL | Notes |
+|---------|-----|-------|
+| API | http://localhost:4000 | NestJS REST API (`/api/v1`) |
+| API Docs (Swagger) | http://localhost:4000/api/docs | Interactive OpenAPI documentation |
+| Ops Web Portal | http://localhost:3001 | Restaurant Admin, Catalog CRUD, KDS |
+| Customer Web Storefront | http://localhost:3002 | Cheezious UX/UI, Add-ons, Cart, Tracking |
+
+---
+
+## 🍕 Cheezious Dynamic Customer Storefront (`apps/customer-web`)
+
+The Customer Web storefront replicates the exact layout, UX/UI, and ordering journey of **[Cheezious](https://cheezious.com/)**, while being 100% dynamic and connected to PostgreSQL and the NestJS REST API:
+
+- **Cheezious Design System**: Signature `#F15B25` (Flame Orange) and `#FFC107` (Amber Gold) branding with responsive layout and micro-animations.
+- **Delivery vs. Pickup Header**: Quick toggle with integrated location selector modal for branch and address selection.
+- **Promotional Hero Banners**: Dynamic carousel fetching active campaigns from `/api/v1/cms/public/banners`.
+- **Sticky Category Anchor Bar**: Smooth scroll-spy category navigation (*Somewhat Local*, *Pizza Deals*, *Cheezy Treats*, *Thin Crust Pizza*, *Burgers*, *Sides*, *Desserts*, *Beverages*).
+- **Cheezious Product Cards**: 4:3 high-res imagery, favorites heart toggle, descriptions, base prices, and interactive `+ ADD TO CART`.
+- **Interactive Add-ons & Customizer Dialog**:
+  - Size variants (Small 7", Regular 10", Large 13", Jumbo 16").
+  - Crust modifier groups (Deep Pan, Cheezy Stuffed Crust, Kabab Crust).
+  - Multi-select add-on options (Extra Cheese, Mayo Garlic Dip, Fries, Soft Drinks).
+  - Dynamic real-time price calculation updating on every selection.
+  - Quantity stepper controls.
+- **Slide-Out Cart Drawer**: Live modifier chips, promo code validation (`CHEEZY10`), dynamic delivery fee logic, and Checkout CTA.
+- **Checkout & Real-Time Order Tracking**:
+  - Delivery details collection (Name, Phone, Street Address, Delivery notes).
+  - Multiple payment methods: Cash on Delivery (COD), Card on Delivery, Digital Wallets.
+  - 5-step visual tracking stepper: `Order Placed` ➔ `Confirmed` ➔ `In the Kitchen` ➔ `Out for Delivery` ➔ `Delivered`.
+  - Orders stored in PostgreSQL `orders`, `order_items`, and `order_status_history` tables with real-time API retrieval.
 
 ---
 
