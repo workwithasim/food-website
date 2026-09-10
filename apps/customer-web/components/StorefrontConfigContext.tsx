@@ -16,6 +16,8 @@ export interface Branch {
   accepts_pickup: boolean;
   min_order_minor?: number | null;
   default_delivery_fee_minor?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface StorefrontSettings {

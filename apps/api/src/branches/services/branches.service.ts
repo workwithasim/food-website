@@ -41,15 +41,34 @@ export class BranchesService extends TenantScopedRepository {
   }
 
   async listBranches(onlyActive: boolean = false) {
-    const branches = await this.db.branch.findMany({
-      where: {
-        tenant_id: this.tenantId,
-        deleted_at: null,
-        ...(onlyActive ? { status: 'ACTIVE' } : {})
-      },
-      orderBy: { created_at: 'asc' },
+    const [branches, coords] = await Promise.all([
+      this.db.branch.findMany({
+        where: {
+          tenant_id: this.tenantId,
+          deleted_at: null,
+          ...(onlyActive ? { status: 'ACTIVE' } : {})
+        },
+        orderBy: { created_at: 'asc' },
+      }),
+      this.db.$queryRaw<Array<{ id: string; lat: number | null; lng: number | null }>>`
+        SELECT id, ST_Y(location::geometry) as lat, ST_X(location::geometry) as lng
+        FROM "branches" WHERE "tenant_id" = ${this.tenantId}::uuid
+      `.catch(() => [])
+    ]);
+
+    const coordMap = new Map<string, { lat: number | null; lng: number | null }>();
+    if (Array.isArray(coords)) {
+      coords.forEach(c => coordMap.set(c.id, { lat: c.lat, lng: c.lng }));
+    }
+
+    return branches.map(b => {
+      const coord = coordMap.get(b.id);
+      return {
+        ...this.serializeBranch(b),
+        latitude: coord?.lat ?? null,
+        longitude: coord?.lng ?? null,
+      };
     });
-    return branches.map(b => this.serializeBranch(b));
   }
 
   async getBranch(id: string) {
