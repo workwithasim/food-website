@@ -116,6 +116,25 @@ export function SidebarDrawer({ isOpen, onClose, onOpenAuth }: SidebarDrawerProp
             <span>Bazinga Burgers</span>
           </Link>
 
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('trigger-pwa-install'));
+              }
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-orange-50/70 hover:bg-orange-100/80 text-[#F15B25] font-bold text-sm transition text-left cursor-pointer border border-orange-200/50"
+          >
+            <span className="text-lg">📲</span>
+            <div className="flex-1 flex items-center justify-between">
+              <span>Install {brandName} App</span>
+              <span className="text-[10px] bg-[#F15B25] text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                Install
+              </span>
+            </div>
+          </button>
+
           <div className="pt-4 mt-4 border-t border-gray-100">
             <a
               href="http://localhost:3001"

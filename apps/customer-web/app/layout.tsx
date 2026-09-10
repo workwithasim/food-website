@@ -5,6 +5,7 @@ import { CartProvider } from "../components/CartProvider";
 import { CartSidebar } from "../components/CartSidebar";
 import { Footer } from "../components/Footer";
 import { StorefrontConfigProvider } from "../components/StorefrontConfigContext";
+import { InstallAppBanner } from "../components/InstallAppBanner";
 
 export const metadata: Metadata = {
   title: "Cheezious | World of Flavors & Cheezy Treats",
@@ -49,6 +50,7 @@ export default async function RootLayout({
           initialConfig={initialConfig}
           initialBranches={initialBranches}
         >
+          <InstallAppBanner />
           <CartProvider>
             <Header />
             <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
