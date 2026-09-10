@@ -31,11 +31,25 @@ export class BranchesService extends TenantScopedRepository {
     super(db, cls);
   }
 
-  async listBranches() {
-    return this.db.branch.findMany({
-      where: { tenant_id: this.tenantId, deleted_at: null },
+  private serializeBranch(b: any) {
+    if (!b) return null;
+    return {
+      ...b,
+      min_order_minor: b.min_order_minor != null ? Number(b.min_order_minor) : null,
+      default_delivery_fee_minor: b.default_delivery_fee_minor != null ? Number(b.default_delivery_fee_minor) : null,
+    };
+  }
+
+  async listBranches(onlyActive: boolean = false) {
+    const branches = await this.db.branch.findMany({
+      where: {
+        tenant_id: this.tenantId,
+        deleted_at: null,
+        ...(onlyActive ? { status: 'ACTIVE' } : {})
+      },
       orderBy: { created_at: 'asc' },
     });
+    return branches.map(b => this.serializeBranch(b));
   }
 
   async getBranch(id: string) {
@@ -51,7 +65,7 @@ export class BranchesService extends TenantScopedRepository {
       throw new NotFoundException('Branch not found');
     }
 
-    return branch;
+    return this.serializeBranch(branch);
   }
 
   async createBranch(dto: CreateBranchDto) {
@@ -164,5 +178,13 @@ export class BranchesService extends TenantScopedRepository {
     });
 
     return { success: true };
+  }
+
+  async deleteBranch(id: string) {
+    await this.getBranch(id);
+    return this.db.branch.update({
+      where: { id },
+      data: { deleted_at: new Date() }
+    });
   }
 }

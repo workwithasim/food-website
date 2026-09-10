@@ -37,7 +37,8 @@ export function BannerCarousel() {
   useEffect(() => {
     async function loadBanners() {
       try {
-        const res = await fetch('http://localhost:4000/api/v1/cms/public/banners', { cache: 'no-store' });
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+        const res = await fetch(`${apiUrl}/cms/public/banners`, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {

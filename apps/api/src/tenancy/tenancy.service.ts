@@ -35,4 +35,54 @@ export class TenancyService extends TenantScopedRepository {
       }, {} as Record<string, boolean>),
     };
   }
+
+  async updateStorefrontSettings(body: any) {
+    const tenantId = this.tenantId;
+    const existing = await this.db.tenantSettings.findUnique({ where: { tenant_id: tenantId } });
+    
+    const existingTheme = (existing?.theme_json as any) || {};
+    const updatedTheme = {
+      ...existingTheme,
+      ...(body.theme_json || {}),
+      ...(body.primary_color ? { primary_color: body.primary_color } : {}),
+      ...(body.secondary_color ? { secondary_color: body.secondary_color } : {}),
+      ...(body.brand_name ? { brand_name: body.brand_name } : {}),
+      ...(body.tagline ? { tagline: body.tagline } : {}),
+      ...(body.hotline ? { hotline: body.hotline } : {}),
+      ...(body.logo_url ? { logo_url: body.logo_url } : {}),
+      ...(body.footer_text ? { footer_text: body.footer_text } : {}),
+      ...(body.copyright ? { copyright: body.copyright } : {}),
+      ...(body.social_links ? { social_links: body.social_links } : {}),
+    };
+
+    await this.db.tenantSettings.upsert({
+      where: { tenant_id: tenantId },
+      update: {
+        restaurant_display_name: body.restaurant_display_name || body.name || existing?.restaurant_display_name || 'Cheezious',
+        support_phone: body.support_phone || body.hotline || existing?.support_phone,
+        support_email: body.support_email || existing?.support_email,
+        theme_json: updatedTheme,
+      },
+      create: {
+        tenant_id: tenantId,
+        restaurant_display_name: body.restaurant_display_name || body.name || 'Cheezious',
+        support_phone: body.support_phone || body.hotline || '051 111 446 699',
+        support_email: body.support_email || 'support@cheezious.com',
+        order_prefix: 'CHZ',
+        theme_json: updatedTheme,
+        checkout_json: {},
+        notification_json: {},
+        seo_json: {},
+      }
+    });
+
+    if (body.restaurant_display_name || body.name) {
+      await this.db.tenant.update({
+        where: { id: tenantId },
+        data: { name: body.restaurant_display_name || body.name }
+      });
+    }
+
+    return this.getStorefrontConfig();
+  }
 }

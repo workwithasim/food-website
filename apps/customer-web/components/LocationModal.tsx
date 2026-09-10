@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useStorefrontConfig, Branch } from './StorefrontConfigContext';
 
 interface LocationModalProps {
   isOpen: boolean;
@@ -19,20 +20,32 @@ export function LocationModal({
   selectedAddress,
   setSelectedAddress,
 }: LocationModalProps) {
+  const { branches, setSelectedBranch } = useStorefrontConfig();
   const [addressInput, setAddressInput] = useState(selectedAddress);
-
-  const branches = [
-    { id: '1', name: 'Main Branch - Central', address: '123 Food Street, Blue Area, Islamabad', time: '11:00 AM - 03:00 AM' },
-    { id: '2', name: 'F-7 Markaz Express', address: 'Shop 4, Gol Market, F-7/3, Islamabad', time: '11:00 AM - 04:00 AM' },
-    { id: '3', name: 'Rawalpindi Saddar Branch', address: 'Haider Road, Saddar, Rawalpindi', time: '11:00 AM - 03:00 AM' },
-    { id: '4', name: 'Bahria Town Phase 4', address: 'Civic Center, Bahria Town, Rawalpindi', time: '12:00 PM - 03:00 AM' },
-  ];
 
   if (!isOpen) return null;
 
-  const handleSave = (addr?: string) => {
+  // Derive popular areas dynamically from branch locations
+  const popularAreas = Array.from(
+    new Set(
+      branches
+        .flatMap((b) => [
+          b.name.replace(/\s+Branch$/i, ''),
+          b.city,
+        ])
+        .filter(Boolean)
+    )
+  ).slice(0, 6);
+
+  const handleSaveDelivery = (addr?: string) => {
     const finalAddr = addr || addressInput.trim() || 'Blue Area, Islamabad';
     setSelectedAddress(finalAddr);
+    onClose();
+  };
+
+  const handleSelectBranch = (branch: Branch) => {
+    setSelectedBranch(branch);
+    setSelectedAddress(`Pickup: ${branch.name} (${branch.city})`);
     onClose();
   };
 
@@ -48,6 +61,7 @@ export function LocationModal({
           <button
             onClick={onClose}
             className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold transition"
+            aria-label="Close Location Dialog"
           >
             ✕
           </button>
@@ -101,25 +115,27 @@ export function LocationModal({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-gray-400 uppercase">Popular Delivery Areas</p>
-                <div className="flex flex-wrap gap-2">
-                  {['F-7, Islamabad', 'F-10 Markaz', 'Blue Area', 'Bahria Phase 4', 'Saddar, Rawalpindi'].map((area) => (
-                    <button
-                      key={area}
-                      type="button"
-                      onClick={() => handleSave(area)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 hover:bg-orange-50 hover:text-[#F15B25] transition"
-                    >
-                      {area}
-                    </button>
-                  ))}
+              {popularAreas.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-gray-400 uppercase">Popular Service Areas</p>
+                  <div className="flex flex-wrap gap-2">
+                    {popularAreas.map((area) => (
+                      <button
+                        key={area}
+                        type="button"
+                        onClick={() => handleSaveDelivery(area)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 hover:bg-orange-50 hover:text-[#F15B25] transition"
+                      >
+                        {area}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <button
                 type="button"
-                onClick={() => handleSave()}
+                onClick={() => handleSaveDelivery()}
                 className="w-full py-3.5 bg-[#F15B25] hover:bg-[#d94a18] text-white font-bold rounded-xl shadow-md transition"
               >
                 Confirm Delivery Address
@@ -127,21 +143,37 @@ export function LocationModal({
             </div>
           ) : (
             <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-              <p className="text-xs font-semibold text-gray-400 uppercase">Select Pickup Branch</p>
-              {branches.map((b) => (
-                <div
-                  key={b.id}
-                  onClick={() => handleSave(`Pickup: ${b.name}`)}
-                  className="p-3.5 rounded-xl border border-gray-200 hover:border-[#F15B25] hover:bg-orange-50/50 cursor-pointer transition flex items-start gap-3"
-                >
-                  <span className="text-2xl mt-0.5">🏪</span>
-                  <div className="flex-1">
-                    <div className="font-bold text-gray-900 text-sm">{b.name}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{b.address}</div>
-                    <div className="text-[11px] text-emerald-600 font-medium mt-1">● Open ({b.time})</div>
-                  </div>
+              <p className="text-xs font-semibold text-gray-400 uppercase">
+                Select Pickup Branch ({branches.length} Available)
+              </p>
+              {branches.length === 0 ? (
+                <div className="p-4 text-center text-xs text-gray-500 bg-gray-50 rounded-xl">
+                  Loading active branches...
                 </div>
-              ))}
+              ) : (
+                branches.map((b) => (
+                  <div
+                    key={b.id}
+                    onClick={() => handleSelectBranch(b)}
+                    className="p-3.5 rounded-xl border border-gray-200 hover:border-[#F15B25] hover:bg-orange-50/50 cursor-pointer transition flex items-start gap-3"
+                  >
+                    <span className="text-2xl mt-0.5">🏪</span>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <div className="font-bold text-gray-900 text-sm">{b.name}</div>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-gray-100 text-gray-600 font-semibold">
+                          {b.city}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5">{b.address_line}</div>
+                      <div className="flex items-center justify-between mt-1 text-[11px]">
+                        <span className="text-emerald-600 font-medium">● Open (11:00 AM - 03:00 AM)</span>
+                        {b.phone && <span className="text-gray-400">📞 {b.phone}</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>

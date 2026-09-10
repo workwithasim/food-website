@@ -2,11 +2,13 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useCart } from '../../components/CartProvider';
+import { useStorefrontConfig } from '../../components/StorefrontConfigContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function CheckoutPage() {
   const { cart, isLoading, clearCart } = useCart();
+  const { branches, selectedBranch } = useStorefrontConfig();
   const router = useRouter();
 
   const [fullName, setFullName] = useState('Ahmed Khan');
@@ -58,7 +60,7 @@ export default function CheckoutPage() {
     setError('');
 
     try {
-      const defaultBranchId = '51d2be63-3ece-4669-bbc4-60a92cee75a0'; // Main Branch
+      const activeBranchId = selectedBranch?.id || branches[0]?.id || '51d2be63-3ece-4669-bbc4-60a92cee75a0';
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
       const res = await fetch(`${apiUrl}/v1/orders`, {
@@ -66,7 +68,7 @@ export default function CheckoutPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cart_id: cart.id,
-          branch_id: defaultBranchId,
+          branch_id: activeBranchId,
           idempotency_key: idempotencyKeyRef.current,
           customer_name: fullName.trim(),
           customer_phone: phone.trim(),

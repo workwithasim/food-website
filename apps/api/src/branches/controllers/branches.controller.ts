@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Inject } from '@nestjs/common';
 import { BranchesService, CreateBranchDto } from '../services/branches.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../rbac/guards/permissions.guard';
@@ -44,5 +44,11 @@ export class BranchesController {
   @RequirePermissions(Permission.MANAGE_BRANCHES)
   async updateSpecialHours(@Param('id') id: string, @Body() body: { special_hours: any[] }) {
     return this.branchesService.updateSpecialHours(id, body.special_hours);
+  }
+
+  @Delete(':id')
+  @RequirePermissions(Permission.MANAGE_BRANCHES)
+  async deleteBranch(@Param('id') id: string) {
+    return this.branchesService.deleteBranch(id);
   }
 }

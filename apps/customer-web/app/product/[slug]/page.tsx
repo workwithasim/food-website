@@ -13,7 +13,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
   let product = null;
   
   try {
-    const res = await fetch(`http://localhost:3001/v1/catalog/products/${params.slug}`, { cache: 'no-store' });
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+    const res = await fetch(`${apiUrl}/v1/catalog/products/${params.slug}`, { cache: 'no-store' });
     if (res.ok) {
       product = await res.json();
     }

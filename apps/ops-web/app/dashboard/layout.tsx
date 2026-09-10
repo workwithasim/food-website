@@ -18,8 +18,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Menu Catalog</p>
           </div>
           <Link href="/dashboard/catalog/categories" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-gray-700">Categories</Link>
-          <Link href="/dashboard/catalog/products" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-gray-700">Products</Link>
+          <Link href="/dashboard/catalog/products" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-gray-700">Products & Deals</Link>
           <Link href="/dashboard/catalog/modifiers" className="block px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium text-gray-700">Modifier Groups</Link>
+          <Link href="/dashboard/banners" className="block px-3 py-2 rounded-md hover:bg-orange-50 text-sm font-bold text-[#F15B25]">Hero Banners (Slider)</Link>
           
           <div className="pt-4 pb-2">
             <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Administration</p>

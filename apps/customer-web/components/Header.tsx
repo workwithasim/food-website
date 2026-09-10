@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useCart } from './CartProvider';
+import { useStorefrontConfig } from './StorefrontConfigContext';
 import { LocationModal } from './LocationModal';
 import { SidebarDrawer } from './SidebarDrawer';
 import { AuthDialog } from './AuthDialog';
@@ -14,6 +15,7 @@ interface HeaderProps {
 
 export function Header({ onSearch, searchQuery = '' }: HeaderProps) {
   const { cart, setSidebarOpen } = useCart();
+  const { config, selectedBranch } = useStorefrontConfig();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLocationOpen, setIsLocationOpen] = useState(false);
@@ -21,6 +23,9 @@ export function Header({ onSearch, searchQuery = '' }: HeaderProps) {
 
   const [orderType, setOrderType] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY');
   const [selectedAddress, setSelectedAddress] = useState('Blue Area, Islamabad');
+
+  const brandName = config.settings?.restaurant_display_name || config.tenant?.name || 'Cheezious';
+  const logoUrl = config.settings?.theme_json?.logo_url;
 
   const cartItemCount = cart?.items?.reduce((acc: number, item: any) => acc + (item.quantity || 1), 0) || 0;
   const cartSubtotal = cart?.items?.reduce((acc: number, item: any) => {
@@ -31,6 +36,10 @@ export function Header({ onSearch, searchQuery = '' }: HeaderProps) {
     }, 0);
     return acc + ((Number(base) + mods) * (item.quantity || 1));
   }, 0) || 0;
+
+  const displayLocation = orderType === 'PICKUP' && selectedBranch
+    ? `Pickup: ${selectedBranch.name}`
+    : selectedAddress;
 
   return (
     <>
@@ -51,11 +60,21 @@ export function Header({ onSearch, searchQuery = '' }: HeaderProps) {
             </button>
 
             <Link href="/" className="flex items-center gap-2 group">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={brandName}
+                  className="h-8 w-auto max-w-[120px] object-contain group-hover:scale-105 transition"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              ) : null}
               <div className="h-9 w-9 rounded-full bg-[#F15B25] text-white flex items-center justify-center font-black text-xl shadow-xs group-hover:scale-105 transition">
-                C
+                {brandName.charAt(0)}
               </div>
               <div className="hidden sm:block">
-                <span className="text-xl font-black tracking-tight text-gray-950">Cheezious</span>
+                <span className="text-xl font-black tracking-tight text-gray-950">{brandName}</span>
               </div>
             </Link>
           </div>
@@ -94,7 +113,7 @@ export function Header({ onSearch, searchQuery = '' }: HeaderProps) {
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-gray-200 hover:border-gray-300 bg-white text-xs font-bold text-gray-800 shadow-xs max-w-xs truncate transition"
             >
               <span className="text-[#F15B25]">📍</span>
-              <span className="truncate">{selectedAddress}</span>
+              <span className="truncate">{displayLocation}</span>
               <span className="text-gray-400 text-[10px]">▼</span>
             </button>
           </div>
@@ -104,7 +123,7 @@ export function Header({ onSearch, searchQuery = '' }: HeaderProps) {
             <div className="flex-1 max-w-xs sm:max-w-sm relative hidden md:block">
               <input
                 type="text"
-                placeholder="Find in Cheezious menu..."
+                placeholder={`Find in ${brandName} menu...`}
                 value={searchQuery}
                 onChange={(e) => onSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-full text-xs sm:text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F15B25] focus:border-transparent transition"

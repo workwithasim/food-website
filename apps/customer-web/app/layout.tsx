@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Header } from "../components/Header";
+import { CartProvider } from "../components/CartProvider";
+import { CartSidebar } from "../components/CartSidebar";
+import { Footer } from "../components/Footer";
+import { StorefrontConfigProvider } from "../components/StorefrontConfigContext";
 
 export const metadata: Metadata = {
   title: "Cheezious | World of Flavors & Cheezy Treats",
@@ -9,37 +14,50 @@ export const metadata: Metadata = {
   },
 };
 
-import { Header } from "../components/Header";
-import { CartProvider } from "../components/CartProvider";
-import { CartSidebar } from "../components/CartSidebar";
+export const dynamic = 'force-dynamic';
 
-export default function RootLayout({
-  children
+export default async function RootLayout({
+  children,
 }: {
   children: React.ReactNode;
 }) {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+
+  let initialConfig = undefined;
+  let initialBranches = undefined;
+
+  try {
+    const [configRes, branchesRes] = await Promise.all([
+      fetch(`${apiUrl}/v1/storefront/config`, { cache: 'no-store' }),
+      fetch(`${apiUrl}/v1/branches`, { cache: 'no-store' }),
+    ]);
+
+    if (configRes.ok) {
+      initialConfig = await configRes.json();
+    }
+    if (branchesRes.ok) {
+      initialBranches = await branchesRes.json();
+    }
+  } catch (err) {
+    console.error("Failed to load storefront initial layout config:", err);
+  }
+
   return (
     <html lang="en">
       <body className="bg-[#F8F9FA] min-h-screen flex flex-col font-sans text-gray-900 antialiased selection:bg-[#FFC107] selection:text-black">
-        <CartProvider>
-          <Header />
-          <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {children}
-          </main>
-          <footer className="border-t border-gray-200 bg-white py-8 px-6 text-center text-xs text-gray-500 mt-auto">
-            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <span className="h-6 w-6 rounded-full bg-[#F15B25] text-white font-black text-xs flex items-center justify-center">C</span>
-                <span className="font-extrabold text-gray-900 text-sm">Cheezious</span>
-                <span className="text-gray-400">— World of Flavors & Cheezy Treats</span>
-              </div>
-              <div className="text-gray-400">
-                UAN Hotline: <strong className="text-gray-800">051 111 446 699</strong> | © {new Date().getFullYear()} Cheezious Platform. All Rights Reserved.
-              </div>
-            </div>
-          </footer>
-          <CartSidebar />
-        </CartProvider>
+        <StorefrontConfigProvider
+          initialConfig={initialConfig}
+          initialBranches={initialBranches}
+        >
+          <CartProvider>
+            <Header />
+            <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              {children}
+            </main>
+            <Footer />
+            <CartSidebar />
+          </CartProvider>
+        </StorefrontConfigProvider>
       </body>
     </html>
   );

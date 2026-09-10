@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useStorefrontConfig } from './StorefrontConfigContext';
 
 interface SidebarDrawerProps {
   isOpen: boolean;
@@ -10,7 +11,14 @@ interface SidebarDrawerProps {
 }
 
 export function SidebarDrawer({ isOpen, onClose, onOpenAuth }: SidebarDrawerProps) {
+  const { config } = useStorefrontConfig();
+
   if (!isOpen) return null;
+
+  const brandName = config.settings?.restaurant_display_name || config.tenant?.name || 'Cheezious';
+  const tagline = config.settings?.theme_json?.tagline || 'World of Flavors & Cheezy Treats';
+  const hotline = config.settings?.support_phone || config.settings?.theme_json?.hotline || '051 111 446 699';
+  const logoUrl = config.settings?.theme_json?.logo_url;
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -32,12 +40,22 @@ export function SidebarDrawer({ isOpen, onClose, onOpenAuth }: SidebarDrawerProp
             ✕
           </button>
           <div className="flex items-center gap-3">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={brandName}
+                className="h-12 w-12 rounded-full bg-white p-1 object-contain shadow-md"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+            ) : null}
             <div className="h-12 w-12 rounded-full bg-white text-[#F15B25] font-black text-2xl flex items-center justify-center shadow-md">
-              C
+              {brandName.charAt(0)}
             </div>
             <div>
-              <div className="text-xl font-extrabold tracking-tight">Cheezious</div>
-              <div className="text-xs text-orange-100 font-medium">World of Cheezy Treats</div>
+              <div className="text-xl font-extrabold tracking-tight">{brandName}</div>
+              <div className="text-xs text-orange-100 font-medium line-clamp-1">{tagline}</div>
             </div>
           </div>
 
@@ -115,11 +133,11 @@ export function SidebarDrawer({ isOpen, onClose, onOpenAuth }: SidebarDrawerProp
         <div className="p-4 border-t border-gray-100 bg-gray-50 text-center">
           <p className="text-xs text-gray-500 mb-1">Need help or want to order by phone?</p>
           <a
-            href="tel:051111446699"
+            href={`tel:${hotline.replace(/\s+/g, '')}`}
             className="inline-flex items-center justify-center gap-2 font-black text-[#F15B25] text-base hover:underline"
           >
             <span>📞</span>
-            <span>051 111 446 699</span>
+            <span>{hotline}</span>
           </a>
         </div>
       </div>

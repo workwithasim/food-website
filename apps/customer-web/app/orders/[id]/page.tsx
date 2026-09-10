@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
+import { useStorefrontConfig } from '../../../components/StorefrontConfigContext';
 
 const TRACKING_STEPS = [
   { key: 'PENDING', label: 'Order Placed', icon: '📝', desc: 'Your order has been received' },
@@ -13,6 +14,7 @@ const TRACKING_STEPS = [
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
+  const { config } = useStorefrontConfig();
   const [order, setOrder] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -193,11 +195,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
           <a
-            href="tel:051111446699"
+            href={`tel:${(config.settings?.support_phone || config.settings?.theme_json?.hotline || '051 111 446 699').replace(/\s+/g, '')}`}
             className="px-3.5 py-2 bg-white hover:bg-gray-50 border border-orange-200 text-[#F15B25] font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 whitespace-nowrap"
           >
             <span>📞</span>
-            <span>Call Store</span>
+            <span>Call Store ({config.settings?.support_phone || config.settings?.theme_json?.hotline || '051 111 446 699'})</span>
           </a>
         </div>
       </div>
