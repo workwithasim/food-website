@@ -53,6 +53,8 @@ export class TenancyService extends TenantScopedRepository {
       ...(body.footer_text ? { footer_text: body.footer_text } : {}),
       ...(body.copyright ? { copyright: body.copyright } : {}),
       ...(body.social_links ? { social_links: body.social_links } : {}),
+      ...(body.google_maps_api_key !== undefined ? { google_maps_api_key: body.google_maps_api_key } : {}),
+      ...(body.delivery_hours !== undefined ? { delivery_hours: body.delivery_hours } : {}),
     };
 
     await this.db.tenantSettings.upsert({

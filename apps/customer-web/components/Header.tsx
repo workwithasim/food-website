@@ -15,7 +15,7 @@ interface HeaderProps {
 
 export function Header({ onSearch, searchQuery = '' }: HeaderProps) {
   const { cart, setSidebarOpen } = useCart();
-  const { config, selectedBranch } = useStorefrontConfig();
+  const { config, selectedBranch, isDeliveryOpen, deliveryHoursInfo } = useStorefrontConfig();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLocationOpen, setIsLocationOpen] = useState(false);
@@ -43,6 +43,17 @@ export function Header({ onSearch, searchQuery = '' }: HeaderProps) {
 
   return (
     <>
+      {/* Closed Delivery Announcement Banner */}
+      {!isDeliveryOpen && (
+        <div className="w-full bg-gradient-to-r from-rose-600 to-amber-600 text-white text-xs font-bold py-2 px-4 text-center flex items-center justify-center gap-2 shadow-xs">
+          <span className="text-sm">🛑</span>
+          <span>
+            {deliveryHoursInfo.closedMessage ||
+              `Delivery is currently closed. Operating hours are ${deliveryHoursInfo.timingDisplay}.`}
+          </span>
+        </div>
+      )}
+
       <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-xs">
         <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 gap-3 sm:gap-4">
           {/* Left: Drawer Toggle & Brand Logo */}
@@ -110,12 +121,32 @@ export function Header({ onSearch, searchQuery = '' }: HeaderProps) {
             {/* Address / Location Pill */}
             <button
               onClick={() => setIsLocationOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-gray-200 hover:border-gray-300 bg-white text-xs font-bold text-gray-800 shadow-xs max-w-xs truncate transition"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-gray-200 hover:border-gray-300 bg-white text-xs font-bold text-gray-800 shadow-xs max-w-xs truncate transition cursor-pointer"
             >
               <span className="text-[#F15B25]">📍</span>
               <span className="truncate">{displayLocation}</span>
               <span className="text-gray-400 text-[10px]">▼</span>
             </button>
+
+            {/* Live Delivery Hours Status Pill */}
+            <div
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black border transition-all ${
+                isDeliveryOpen
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-rose-50 text-rose-800 border-rose-200'
+              }`}
+              title={isDeliveryOpen ? `Open for Delivery (${deliveryHoursInfo.timingDisplay})` : deliveryHoursInfo.closedMessage}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  isDeliveryOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                }`}
+              />
+              <span>{isDeliveryOpen ? 'Delivery Open' : 'Closed'}</span>
+              <span className="text-[10px] font-semibold opacity-75 hidden xl:inline">
+                ({deliveryHoursInfo.timingDisplay})
+              </span>
+            </div>
           </div>
 
           {/* Search Bar */}

@@ -51,7 +51,68 @@ export class OrdersService extends TenantScopedRepository {
       throw new ConflictException('Order creation is already in progress for this idempotency key');
     }
 
-    // 2. Validate Cart and Quote
+    // 2. Validate Branch Status and Delivery Hours
+    const branch = await this.db.branch.findUnique({
+      where: { id: branch_id },
+    });
+    if (!branch || branch.tenant_id !== this.tenantId) {
+      throw new BadRequestException('Selected branch was not found.');
+    }
+    if (branch.status !== 'ACTIVE') {
+      throw new BadRequestException(`Branch ${branch.name} is currently not accepting orders.`);
+    }
+
+    const tenantSettings = await this.db.tenantSettings.findUnique({
+      where: { tenant_id: this.tenantId },
+    });
+    const theme = (tenantSettings?.theme_json as any) || {};
+    const deliveryHours = theme.delivery_hours || {
+      open: '11:00',
+      close: '03:00',
+      is_accepting_orders: true,
+    };
+
+    if (deliveryHours.is_accepting_orders === false) {
+      throw new BadRequestException(
+        deliveryHours.closed_message || 'Restaurant is currently not accepting online delivery orders.'
+      );
+    }
+
+    if (deliveryHours.open && deliveryHours.close) {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: branch.timezone || 'Asia/Karachi',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).formatToParts(new Date());
+
+      const hourStr = parts.find((p) => p.type === 'hour')?.value || '12';
+      const minStr = parts.find((p) => p.type === 'minute')?.value || '00';
+      const currentMin = parseInt(hourStr, 10) * 60 + parseInt(minStr, 10);
+
+      const [openH, openM] = deliveryHours.open.split(':').map((v: string) => parseInt(v, 10));
+      const [closeH, closeM] = deliveryHours.close.split(':').map((v: string) => parseInt(v, 10));
+
+      const openMin = (isNaN(openH) ? 11 : openH) * 60 + (isNaN(openM) ? 0 : openM);
+      const closeMin = (isNaN(closeH) ? 3 : closeH) * 60 + (isNaN(closeM) ? 0 : closeM);
+
+      let isWithinHours = false;
+      if (closeMin < openMin) {
+        // Crosses midnight (e.g. 11:00 AM to 03:00 AM)
+        isWithinHours = currentMin >= openMin || currentMin < closeMin;
+      } else {
+        isWithinHours = currentMin >= openMin && currentMin < closeMin;
+      }
+
+      if (!isWithinHours) {
+        throw new BadRequestException(
+          deliveryHours.closed_message ||
+            `Online delivery is currently closed. Operating delivery hours are ${deliveryHours.open} to ${deliveryHours.close} (PKT).`
+        );
+      }
+    }
+
+    // 3. Validate Cart and Quote
     const quote = await this.pricingService.calculateQuote({ cart_id, branch_id });
     
     const cart = await this.db.cart.findFirst({

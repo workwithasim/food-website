@@ -35,12 +35,27 @@ export interface StorefrontSettings {
     footer_text?: string;
     copyright?: string;
     google_maps_api_key?: string;
+    delivery_hours?: {
+      open?: string;
+      close?: string;
+      is_accepting_orders?: boolean;
+      closed_message?: string;
+    };
     social_links?: {
       facebook?: string;
       instagram?: string;
       tiktok?: string;
     };
   };
+}
+
+export interface DeliveryHoursInfo {
+  open: string;
+  close: string;
+  isAcceptingOrders: boolean;
+  isOpen: boolean;
+  timingDisplay: string;
+  closedMessage: string;
 }
 
 export interface StorefrontConfig {
@@ -59,6 +74,8 @@ interface StorefrontContextType {
   selectedBranch: Branch | null;
   setSelectedBranch: (branch: Branch | null) => void;
   isLoading: boolean;
+  isDeliveryOpen: boolean;
+  deliveryHoursInfo: DeliveryHoursInfo;
   refreshConfig: () => Promise<void>;
 }
 
@@ -92,12 +109,106 @@ const DEFAULT_CONFIG: StorefrontConfig = {
   features: {},
 };
 
+function computeDeliveryHours(themeJson?: any): DeliveryHoursInfo {
+  const dh = themeJson?.delivery_hours || {};
+  const open = dh.open || '11:00';
+  const close = dh.close || '03:00';
+  const isAcceptingOrders = dh.is_accepting_orders !== false;
+  const closedMessage =
+    dh.closed_message ||
+    `We are currently closed for online delivery. Delivery hours are ${open} to ${close}.`;
+
+  const formatTime12h = (timeStr: string) => {
+    const parts = timeStr.split(':');
+    const h = parseInt(parts[0] || '0', 10);
+    const m = parseInt(parts[1] || '0', 10);
+    if (isNaN(h)) return timeStr;
+    const period = h >= 12 ? 'PM' : 'AM';
+    const displayH = h % 12 === 0 ? 12 : h % 12;
+    const displayM = isNaN(m) ? '00' : String(m).padStart(2, '0');
+    return `${displayH}:${displayM} ${period}`;
+  };
+
+  const timingDisplay = `${formatTime12h(open)} - ${formatTime12h(close)}`;
+
+  if (!isAcceptingOrders) {
+    return {
+      open,
+      close,
+      isAcceptingOrders: false,
+      isOpen: false,
+      timingDisplay,
+      closedMessage,
+    };
+  }
+
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Karachi',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date());
+
+    const hourStr = parts.find((p) => p.type === 'hour')?.value || '12';
+    const minStr = parts.find((p) => p.type === 'minute')?.value || '00';
+    const currentMin = parseInt(hourStr, 10) * 60 + parseInt(minStr, 10);
+
+    const openParts = open.split(':');
+    const openH = parseInt(openParts[0] || '11', 10);
+    const openM = parseInt(openParts[1] || '0', 10);
+
+    const closeParts = close.split(':');
+    const closeH = parseInt(closeParts[0] || '3', 10);
+    const closeM = parseInt(closeParts[1] || '0', 10);
+
+    const openMin = (isNaN(openH) ? 11 : openH) * 60 + (isNaN(openM) ? 0 : openM);
+    const closeMin = (isNaN(closeH) ? 3 : closeH) * 60 + (isNaN(closeM) ? 0 : closeM);
+
+    let isOpen = false;
+    if (closeMin < openMin) {
+      isOpen = currentMin >= openMin || currentMin < closeMin;
+    } else {
+      isOpen = currentMin >= openMin && currentMin < closeMin;
+    }
+
+    return {
+      open,
+      close,
+      isAcceptingOrders: true,
+      isOpen,
+      timingDisplay,
+      closedMessage,
+    };
+  } catch (err) {
+    return {
+      open,
+      close,
+      isAcceptingOrders: true,
+      isOpen: true,
+      timingDisplay,
+      closedMessage,
+    };
+  }
+}
+
+const DEFAULT_DELIVERY_HOURS: DeliveryHoursInfo = {
+  open: '11:00',
+  close: '03:00',
+  isAcceptingOrders: true,
+  isOpen: true,
+  timingDisplay: '11:00 AM - 03:00 AM',
+  closedMessage: 'We are currently closed for online delivery.',
+};
+
 const StorefrontConfigContext = createContext<StorefrontContextType>({
   config: DEFAULT_CONFIG,
   branches: [],
   selectedBranch: null,
   setSelectedBranch: () => {},
   isLoading: false,
+  isDeliveryOpen: true,
+  deliveryHoursInfo: DEFAULT_DELIVERY_HOURS,
   refreshConfig: async () => {},
 });
 
@@ -116,6 +227,9 @@ export function StorefrontConfigProvider({
     (initialBranches && initialBranches.length > 0) ? (initialBranches[0] ?? null) : null
   );
   const [isLoading, setIsLoading] = useState(false);
+
+  const deliveryHoursInfo = computeDeliveryHours(config.settings?.theme_json);
+  const isDeliveryOpen = deliveryHoursInfo.isOpen;
 
   const fetchLatest = async () => {
     try {
@@ -165,6 +279,8 @@ export function StorefrontConfigProvider({
         selectedBranch,
         setSelectedBranch,
         isLoading,
+        isDeliveryOpen,
+        deliveryHoursInfo,
         refreshConfig: fetchLatest,
       }}
     >

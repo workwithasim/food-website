@@ -3,9 +3,11 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useCart } from './CartProvider';
+import { useStorefrontConfig } from './StorefrontConfigContext';
 
 export function CartSidebar() {
   const { cart, isLoading, isSidebarOpen, setSidebarOpen, updateQuantity } = useCart();
+  const { isDeliveryOpen, deliveryHoursInfo } = useStorefrontConfig();
   const [couponCode, setCouponCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
   const [couponMessage, setCouponMessage] = useState<string | null>(null);
@@ -237,15 +239,37 @@ export function CartSidebar() {
               </div>
             </div>
 
-            {/* Checkout Action */}
-            <Link
-              href="/checkout"
-              onClick={() => setSidebarOpen(false)}
-              className="w-full py-3.5 bg-[#F15B25] hover:bg-[#d94a18] text-white font-extrabold rounded-xl shadow-lg transition-all flex items-center justify-between px-6 text-sm"
-            >
-              <span>Proceed to Checkout</span>
-              <span>PKR {grandTotal.toLocaleString()} →</span>
-            </Link>
+            {/* Checkout Action or Closed Delivery Warning */}
+            {isDeliveryOpen ? (
+              <Link
+                href="/checkout"
+                onClick={() => setSidebarOpen(false)}
+                className="w-full py-3.5 bg-[#F15B25] hover:bg-[#d94a18] text-white font-extrabold rounded-xl shadow-lg transition-all flex items-center justify-between px-6 text-sm cursor-pointer"
+              >
+                <span>Proceed to Checkout</span>
+                <span>PKR {grandTotal.toLocaleString()} →</span>
+              </Link>
+            ) : (
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-semibold flex items-start gap-2.5">
+                  <span className="text-base mt-0.5">🛑</span>
+                  <div>
+                    <div className="font-extrabold text-amber-950">Currently Closed for Delivery</div>
+                    <div className="text-[11px] text-amber-800 font-medium mt-0.5">
+                      {deliveryHoursInfo.closedMessage ||
+                        `Delivery hours are ${deliveryHoursInfo.timingDisplay}. We cannot accept orders right now.`}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled
+                  className="w-full py-3.5 bg-gray-200 text-gray-500 font-extrabold rounded-xl text-sm cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <span>Delivery Currently Closed</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

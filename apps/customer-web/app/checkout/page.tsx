@@ -8,7 +8,7 @@ import Link from 'next/link';
 
 export default function CheckoutPage() {
   const { cart, isLoading, clearCart } = useCart();
-  const { branches, selectedBranch } = useStorefrontConfig();
+  const { branches, selectedBranch, isDeliveryOpen, deliveryHoursInfo } = useStorefrontConfig();
   const router = useRouter();
 
   const [fullName, setFullName] = useState('Ahmed Khan');
@@ -50,6 +50,14 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cart?.id) return;
+
+    if (!isDeliveryOpen) {
+      setError(
+        deliveryHoursInfo.closedMessage ||
+          `Online delivery is currently closed. Operating hours are ${deliveryHoursInfo.timingDisplay}.`
+      );
+      return;
+    }
 
     if (!fullName.trim() || !phone.trim() || !address.trim()) {
       setError('Please fill in all required delivery details.');
@@ -131,6 +139,20 @@ export default function CheckoutPage() {
           Estimated Time: 35 Mins
         </span>
       </div>
+
+      {/* Closed Delivery Notice Banner */}
+      {!isDeliveryOpen && (
+        <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 flex items-start gap-3 shadow-xs">
+          <span className="text-2xl mt-0.5">🛑</span>
+          <div>
+            <h3 className="font-extrabold text-sm sm:text-base">Restaurant is Currently Closed for Online Orders</h3>
+            <p className="text-xs text-amber-800 mt-1 font-medium">
+              {deliveryHoursInfo.closedMessage ||
+                `Delivery operating hours are ${deliveryHoursInfo.timingDisplay}. We cannot accept orders right now.`}
+            </p>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Form Fields */}
@@ -365,10 +387,16 @@ export default function CheckoutPage() {
             {/* Submit CTA */}
             <button
               type="submit"
-              disabled={placingOrder}
-              className="w-full py-4 bg-[#F15B25] hover:bg-[#d94a18] text-white font-extrabold text-base rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              disabled={placingOrder || !isDeliveryOpen}
+              className={`w-full py-4 font-extrabold text-base rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${
+                !isDeliveryOpen
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-[#F15B25] hover:bg-[#d94a18] text-white cursor-pointer disabled:opacity-50'
+              }`}
             >
-              {placingOrder ? (
+              {!isDeliveryOpen ? (
+                <span>Delivery Currently Closed ({deliveryHoursInfo.timingDisplay})</span>
+              ) : placingOrder ? (
                 <>
                   <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span>Confirming Order...</span>

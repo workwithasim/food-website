@@ -15,6 +15,10 @@ export default function SettingsPage() {
     copyright: '© 2026 Cheezious Pakistan. All Rights Reserved.',
     googleMapsApiKey: '',
     currency: 'PKR',
+    deliveryOpen: '11:00',
+    deliveryClose: '03:00',
+    isAcceptingOrders: true,
+    closedMessage: 'We are currently closed for delivery. Delivery hours are 11:00 AM to 03:00 AM.',
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -33,6 +37,7 @@ export default function SettingsPage() {
         const data = await res.json();
         const settings = data.settings || {};
         const theme = (settings.theme_json as any) || {};
+        const dh = theme.delivery_hours || {};
 
         setFormData({
           name: settings.restaurant_display_name || data.tenant?.name || 'Cheezious',
@@ -46,6 +51,10 @@ export default function SettingsPage() {
           copyright: theme.copyright || '© 2026 Cheezious Pakistan. All Rights Reserved.',
           googleMapsApiKey: theme.google_maps_api_key || '',
           currency: data.tenant?.default_currency || 'PKR',
+          deliveryOpen: dh.open || '11:00',
+          deliveryClose: dh.close || '03:00',
+          isAcceptingOrders: dh.is_accepting_orders !== false,
+          closedMessage: dh.closed_message || 'We are currently closed for delivery. Delivery hours are 11:00 AM to 03:00 AM.',
         });
       }
     } catch (err) {
@@ -72,6 +81,12 @@ export default function SettingsPage() {
         footer_text: formData.footerText,
         copyright: formData.copyright,
         google_maps_api_key: formData.googleMapsApiKey.trim(),
+        delivery_hours: {
+          open: formData.deliveryOpen,
+          close: formData.deliveryClose,
+          is_accepting_orders: formData.isAcceptingOrders,
+          closed_message: formData.closedMessage,
+        },
       };
 
       const res = await fetch('/api/settings', {
@@ -277,6 +292,93 @@ export default function SettingsPage() {
                 className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#F15B25] focus:outline-none" 
               />
             </div>
+          </div>
+        </div>
+
+        {/* Delivery & Operating Timings */}
+        <div className="pt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-black text-gray-900 flex items-center gap-2">
+                <span>🕒</span>
+                <span>Delivery & Operating Timings</span>
+              </h2>
+              <p className="text-xs text-gray-400">
+                Configure your restaurant delivery operational hours. If outside these hours or set to Closed, customer orders are automatically blocked.
+              </p>
+            </div>
+            <div
+              className={`px-3 py-1 rounded-full text-xs font-black border flex items-center gap-1.5 ${
+                formData.isAcceptingOrders
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-rose-50 text-rose-800 border-rose-200'
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  formData.isAcceptingOrders ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                }`}
+              />
+              <span>{formData.isAcceptingOrders ? 'Accepting Orders' : 'Store Paused'}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50/80 p-4 rounded-2xl border border-gray-200/80">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Store Status</label>
+              <select
+                value={formData.isAcceptingOrders ? 'OPEN' : 'CLOSED'}
+                onChange={(e) =>
+                  setFormData({ ...formData, isAcceptingOrders: e.target.value === 'OPEN' })
+                }
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold bg-white focus:ring-2 focus:ring-[#F15B25] focus:outline-none"
+              >
+                <option value="OPEN">🟢 Open (Accepting Orders)</option>
+                <option value="CLOSED">🔴 Closed (Stop All Orders)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                Opening Time (PKT)
+              </label>
+              <input
+                type="time"
+                value={formData.deliveryOpen}
+                onChange={(e) => setFormData({ ...formData, deliveryOpen: e.target.value })}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold bg-white focus:ring-2 focus:ring-[#F15B25] focus:outline-none"
+              />
+              <span className="text-[10px] text-gray-400">Default: 11:00 (11:00 AM)</span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                Closing Time (PKT)
+              </label>
+              <input
+                type="time"
+                value={formData.deliveryClose}
+                onChange={(e) => setFormData({ ...formData, deliveryClose: e.target.value })}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold bg-white focus:ring-2 focus:ring-[#F15B25] focus:outline-none"
+              />
+              <span className="text-[10px] text-gray-400">Default: 03:00 (03:00 AM Next Day)</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+              Customer Closed Notice Message
+            </label>
+            <input
+              type="text"
+              value={formData.closedMessage}
+              onChange={(e) => setFormData({ ...formData, closedMessage: e.target.value })}
+              placeholder="e.g. We are currently closed for delivery. Delivery hours are 11:00 AM to 03:00 AM."
+              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#F15B25] focus:outline-none"
+            />
+            <p className="text-[11px] text-gray-400 mt-1">
+              Displayed in the header banner, cart sidebar, and checkout page whenever delivery is closed.
+            </p>
           </div>
         </div>
 
