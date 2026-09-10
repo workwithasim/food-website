@@ -1,7 +1,7 @@
 import { Controller, Post, Get, Body, Param, Req } from '@nestjs/common';
 import { OrdersService, CreateOrderDto } from './orders.service';
 
-@Controller('api/v1/orders')
+@Controller('v1/orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 

@@ -37,7 +37,7 @@ export class ProductsService extends TenantScopedRepository {
   }
 
   async listProducts(filters?: { category_id?: string; status?: CatalogStatus; featured?: boolean }) {
-    return this.db.product.findMany({
+    const products = await this.db.product.findMany({
       where: {
         tenant_id: this.tenantId,
         deleted_at: null,
@@ -48,10 +48,21 @@ export class ProductsService extends TenantScopedRepository {
       include: { 
         media: { orderBy: { sort_order: 'asc' } }, 
         category: true,
-        variants: { where: { status: 'ACTIVE' }, orderBy: { sort_order: 'asc' } }
+        variants: { where: { status: 'ACTIVE' }, orderBy: { sort_order: 'asc' } },
+        modifier_groups: {
+          orderBy: { sort_order: 'asc' },
+          include: {
+            modifier_group: {
+              include: {
+                modifiers: { where: { status: 'ACTIVE' }, orderBy: { sort_order: 'asc' } },
+              },
+            },
+          },
+        },
       },
       orderBy: { created_at: 'asc' },
     });
+    return products.map(p => this.serializeProduct(p));
   }
 
   async getProduct(id: string) {
@@ -232,6 +243,20 @@ export class ProductsService extends TenantScopedRepository {
     return {
       ...p,
       base_price_minor: Number(p.base_price_minor),
+      variants: p.variants?.map((v: any) => ({
+        ...v,
+        price_minor: Number(v.price_minor),
+      })),
+      modifier_groups: p.modifier_groups?.map((pmg: any) => ({
+        ...pmg,
+        modifier_group: pmg.modifier_group ? {
+          ...pmg.modifier_group,
+          modifiers: pmg.modifier_group.modifiers?.map((m: any) => ({
+            ...m,
+            price_delta_minor: Number(m.price_delta_minor),
+          })),
+        } : undefined,
+      })),
     };
   }
 }

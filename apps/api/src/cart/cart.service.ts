@@ -22,10 +22,35 @@ export class CartService extends TenantScopedRepository {
     super(db, cls);
   }
 
+  private serializeCart(cart: any) {
+    if (!cart) return null;
+    return {
+      ...cart,
+      items: (cart.items || []).map((item: any) => ({
+        ...item,
+        product: item.product ? {
+          ...item.product,
+          base_price_minor: item.product.base_price_minor != null ? Number(item.product.base_price_minor) : 0,
+        } : null,
+        variant: item.variant ? {
+          ...item.variant,
+          price_minor: item.variant.price_minor != null ? Number(item.variant.price_minor) : 0,
+        } : null,
+        modifiers: (item.modifiers || []).map((m: any) => ({
+          ...m,
+          modifier: m.modifier ? {
+            ...m.modifier,
+            price_delta_minor: m.modifier.price_delta_minor != null ? Number(m.modifier.price_delta_minor) : 0,
+          } : null,
+        }))
+      }))
+    };
+  }
+
   async getCart(identifier: { customerId?: string; guestToken?: string }) {
     if (!identifier.customerId && !identifier.guestToken) return null;
 
-    return this.db.cart.findFirst({
+    const cart = await this.db.cart.findFirst({
       where: {
         tenant_id: this.tenantId,
         status: 'ACTIVE',
@@ -37,12 +62,24 @@ export class CartService extends TenantScopedRepository {
       include: {
         items: {
           include: {
-            modifiers: true,
+            product: {
+              include: {
+                media: true,
+              }
+            },
+            variant: true,
+            modifiers: {
+              include: {
+                modifier: true,
+              }
+            },
           },
           orderBy: { created_at: 'asc' }
         }
       }
     });
+
+    return this.serializeCart(cart);
   }
 
   async createCart(identifier: { customerId?: string; guestToken?: string }, method: FulfillmentMethod = 'DELIVERY') {

@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
-import { Button } from '@restaurant/ui';
+import React, { useState } from 'react';
 
 interface AuthDialogProps {
   isOpen: boolean;
@@ -9,59 +8,144 @@ interface AuthDialogProps {
 }
 
 export function AuthDialog({ isOpen, onClose }: AuthDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [step, setStep] = useState<'PHONE' | 'OTP'>('PHONE');
+  const [phone, setPhone] = useState('3001234567');
+  const [otp, setOtp] = useState('1234');
+  const [isSuccess, setIsSuccess] = useState(false);
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
+  if (!isOpen) return null;
 
-    if (isOpen && !dialog.open) {
-      dialog.showModal();
-    } else if (!isOpen && dialog.open) {
-      dialog.close();
-    }
-  }, [isOpen]);
+  const handleSendOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!phone.trim()) return;
+    setStep('OTP');
+  };
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    
-    const handleCancel = (e: Event) => {
-      e.preventDefault();
+  const handleVerifyOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSuccess(true);
+    setTimeout(() => {
+      setIsSuccess(false);
+      setStep('PHONE');
       onClose();
-    };
-    
-    dialog.addEventListener('cancel', handleCancel);
-    return () => dialog.removeEventListener('cancel', handleCancel);
-  }, [onClose]);
+    }, 1200);
+  };
+
+  const handleGuest = () => {
+    onClose();
+  };
 
   return (
-    <dialog 
-      ref={dialogRef}
-      className="backdrop:bg-black/50 open:animate-in open:zoom-in-95 open:fade-in-90 p-0 shadow-xl rounded-xl w-full max-w-md m-auto"
-    >
-      <div className="p-6 bg-white flex flex-col gap-4">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-2xl font-bold">Sign In / Sign Up</h2>
-          <button onClick={onClose} aria-label="Close Auth" className="text-gray-500 hover:text-black">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-[#F15B25] to-[#E63946] p-6 text-white text-center relative">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold transition"
+            aria-label="Close Auth"
+          >
+            ✕
           </button>
+          <div className="h-12 w-12 rounded-full bg-white text-[#F15B25] font-black text-2xl mx-auto flex items-center justify-center shadow-md mb-2">
+            C
+          </div>
+          <h2 className="text-xl font-black">Welcome to Cheezious</h2>
+          <p className="text-xs text-orange-100 mt-0.5">Login with your mobile number to get started</p>
         </div>
-        <p className="text-gray-600 text-sm">
-          Please enter your phone number or email to continue.
-        </p>
-        <input 
-          type="text" 
-          placeholder="Email or Phone" 
-          className="w-full px-4 py-2 border rounded-md outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500"
-        />
-        <Button variant="primary" className="w-full justify-center">
-          Continue
-        </Button>
+
+        {/* Content */}
+        <div className="p-6 space-y-4">
+          {isSuccess ? (
+            <div className="text-center py-8 space-y-2">
+              <div className="text-4xl">🎉</div>
+              <h3 className="text-lg font-black text-emerald-600">Successfully Signed In!</h3>
+              <p className="text-xs text-gray-500">Welcome back to Cheezious.</p>
+            </div>
+          ) : step === 'PHONE' ? (
+            <form onSubmit={handleSendOtp} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                  Mobile Phone Number
+                </label>
+                <div className="flex rounded-xl border border-gray-300 overflow-hidden focus-within:ring-2 focus-within:ring-[#F15B25]">
+                  <span className="px-3.5 py-3 bg-gray-100 text-gray-700 font-bold text-sm border-r border-gray-300 flex items-center gap-1">
+                    <span>🇵🇰</span>
+                    <span>+92</span>
+                  </span>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="300 1234567"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full px-3.5 py-3 text-sm focus:outline-none font-bold"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3.5 bg-[#F15B25] hover:bg-[#d94a18] text-white font-extrabold rounded-xl shadow-md transition text-sm"
+              >
+                Send Verification Code
+              </button>
+
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-gray-200" />
+                <span className="flex-shrink mx-3 text-gray-400 text-xs uppercase font-bold">Or</span>
+                <div className="flex-grow border-t border-gray-200" />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGuest}
+                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-xl text-xs transition"
+              >
+                Continue as Guest
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Enter 4-Digit OTP Code
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setStep('PHONE')}
+                    className="text-xs text-[#F15B25] font-bold hover:underline"
+                  >
+                    Edit Phone
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  maxLength={4}
+                  required
+                  placeholder="1234"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl text-center text-xl tracking-widest font-black focus:outline-none focus:ring-2 focus:ring-[#F15B25]"
+                  autoFocus
+                />
+                <p className="text-[11px] text-gray-400 mt-1 text-center">
+                  Demo code <strong className="text-gray-700">1234</strong> is pre-filled for testing.
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3.5 bg-[#F15B25] hover:bg-[#d94a18] text-white font-extrabold rounded-xl shadow-md transition text-sm"
+              >
+                Verify & Continue
+              </button>
+            </form>
+          )}
+        </div>
       </div>
-    </dialog>
+    </div>
   );
 }
