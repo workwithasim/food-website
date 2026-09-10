@@ -13,6 +13,7 @@ export default function SettingsPage() {
     secondaryColor: '#FFC107',
     footerText: 'Cheezious is one of the fastest-growing food chains in Pakistan, delivering oven-fresh pizzas, crunchy bazinga burgers, and cheesy delights across twin cities and beyond.',
     copyright: '© 2026 Cheezious Pakistan. All Rights Reserved.',
+    googleMapsApiKey: '',
     currency: 'PKR',
   });
 
@@ -43,6 +44,7 @@ export default function SettingsPage() {
           secondaryColor: (theme.secondary_color && theme.secondary_color !== '#000000') ? theme.secondary_color : '#FFC107',
           footerText: theme.footer_text || 'Cheezious is one of the fastest-growing food chains in Pakistan, delivering oven-fresh pizzas, crunchy bazinga burgers, and cheesy delights across twin cities and beyond.',
           copyright: theme.copyright || '© 2026 Cheezious Pakistan. All Rights Reserved.',
+          googleMapsApiKey: theme.google_maps_api_key || '',
           currency: data.tenant?.default_currency || 'PKR',
         });
       }
@@ -69,6 +71,7 @@ export default function SettingsPage() {
         secondary_color: formData.secondaryColor,
         footer_text: formData.footerText,
         copyright: formData.copyright,
+        google_maps_api_key: formData.googleMapsApiKey.trim(),
       };
 
       const res = await fetch('/api/settings', {
@@ -274,6 +277,28 @@ export default function SettingsPage() {
                 className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#F15B25] focus:outline-none" 
               />
             </div>
+          </div>
+        </div>
+
+        {/* Google Maps & Geocoding Integration */}
+        <div className="pt-6 space-y-4">
+          <div>
+            <h2 className="text-base font-black text-gray-900">Google Maps & Live Location Integration</h2>
+            <p className="text-xs text-gray-400">Enter your Google Maps API key to power official Google Places address autocomplete and high-precision Google Geocoding.</p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Google Maps API Key (Optional)</label>
+            <input 
+              type="text" 
+              value={formData.googleMapsApiKey}
+              onChange={e => setFormData({ ...formData, googleMapsApiKey: e.target.value })}
+              placeholder="e.g. AIzaSy..."
+              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-[#F15B25] focus:outline-none" 
+            />
+            <p className="text-[11px] text-gray-400 mt-1">
+              When provided, customer storefront uses official Google Maps Geocoding & Places search. If left empty, the storefront uses high-accuracy satellite GPS and OpenStreetMap reverse geocoding for Pakistan.
+            </p>
           </div>
         </div>
 

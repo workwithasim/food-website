@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useStorefrontConfig, Branch } from './StorefrontConfigContext';
 
 interface LocationModalProps {
@@ -16,13 +16,24 @@ interface DetectedLocation {
   address: string;
   lat: number;
   lng: number;
+  provider?: string;
   nearestBranchName: string | null;
   distanceKm: number | null;
 }
 
+interface Suggestion {
+  id: string;
+  title: string;
+  subtitle: string;
+  fullAddress: string;
+  lat?: number;
+  lng?: number;
+  provider?: string;
+}
+
 // Calculate distance in kilometers between two GPS coordinates
 function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth's radius in km
+  const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -50,9 +61,13 @@ export function LocationModal({
   const [detectedLocation, setDetectedLocation] = useState<DetectedLocation | null>(null);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
-  if (!isOpen) return null;
+  // Address search autocomplete states
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Derive popular areas dynamically from branch locations
+  // Popular areas derived dynamically from database branches
   const popularAreas = Array.from(
     new Set(
       branches
@@ -64,8 +79,52 @@ export function LocationModal({
     )
   ).slice(0, 6);
 
+  // Debounced autocomplete query when user types address
+  useEffect(() => {
+    if (!addressInput || addressInput.length < 3 || addressInput === selectedAddress) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        setIsSearching(true);
+        const res = await fetch(`/api/geocode?query=${encodeURIComponent(addressInput)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+            setSuggestions(data.suggestions);
+            setShowSuggestions(true);
+          } else {
+            setSuggestions([]);
+            setShowSuggestions(false);
+          }
+        }
+      } catch (err) {
+        console.error('Autocomplete search error:', err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 350);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [addressInput, selectedAddress]);
+
+  if (!isOpen) return null;
+
+  // Real-time GPS & Geocoding Detection
   const handleFetchLiveLocation = () => {
     setLocationError(null);
+    setShowSuggestions(false);
 
     if (typeof window === 'undefined' || !navigator.geolocation) {
       setLocationError('Geolocation is not supported by your browser.');
@@ -79,7 +138,38 @@ export function LocationModal({
         const { latitude, longitude } = position.coords;
         setUserCoords({ lat: latitude, lng: longitude });
 
-        // 1. Calculate distances to all branches to find the closest branch
+        try {
+          // Call multi-engine geocoding endpoint (Google Maps + OSM + BigDataCloud)
+          const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
+          if (res.ok) {
+            const data = await res.json();
+            const formatted = data.formattedAddress;
+
+            setAddressInput(formatted);
+            setDetectedLocation({
+              address: formatted,
+              lat: latitude,
+              lng: longitude,
+              provider: data.provider,
+              nearestBranchName: data.nearestBranch?.name || null,
+              distanceKm: data.nearestBranch?.distanceKm || null,
+            });
+
+            if (data.nearestBranch) {
+              const matched = branches.find((b) => b.id === data.nearestBranch.id);
+              if (matched) {
+                setSelectedBranch(matched);
+              }
+            }
+
+            setIsDetecting(false);
+            return;
+          }
+        } catch (err) {
+          console.error('Geocoding endpoint error:', err);
+        }
+
+        // Fallback calculation if endpoint is unavailable
         let nearest: (Branch & { distanceKm: number }) | null = null;
         let minDistance = Infinity;
 
@@ -97,64 +187,23 @@ export function LocationModal({
           setSelectedBranch(nearest);
         }
 
-        // 2. Reverse geocode via OpenStreetMap Nominatim with quick timeout
-        let formattedAddress = '';
-        try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 4000);
+        const fallbackAddr = nearest
+          ? `${nearest.name} Service Area, ${nearest.city} (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`
+          : `GPS Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
 
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
-            {
-              signal: controller.signal,
-              headers: { 'Accept-Language': 'en' },
-            }
-          );
-          clearTimeout(timeout);
-
-          if (res.ok) {
-            const data = await res.json();
-            const addr = data.address || {};
-            const parts = [
-              addr.road || addr.street || addr.neighbourhood,
-              addr.suburb || addr.residential || addr.city_district,
-              addr.city || addr.town || addr.county,
-              addr.country || 'Pakistan',
-            ].filter(Boolean);
-
-            if (parts.length > 0) {
-              formattedAddress = parts.join(', ');
-            } else if (data.display_name) {
-              formattedAddress = data.display_name.split(',').slice(0, 3).join(', ').trim();
-            }
-          }
-        } catch {
-          // If reverse geocoding times out, provide realistic fallback based on nearest branch
-        }
-
-        const nearestName: string = nearest?.name ?? '';
-        const nearestCity: string = nearest?.city ?? '';
-        const nearestDist: number | null = nearest?.distanceKm ?? null;
-
-        if (!formattedAddress) {
-          formattedAddress = nearestName
-            ? `${nearestName} Delivery Zone, ${nearestCity} (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`
-            : `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
-        }
-
-        setAddressInput(formattedAddress);
+        setAddressInput(fallbackAddr);
         setDetectedLocation({
-          address: formattedAddress,
+          address: fallbackAddr,
           lat: latitude,
           lng: longitude,
-          nearestBranchName: nearestName || null,
-          distanceKm: nearestDist,
+          nearestBranchName: nearest?.name || null,
+          distanceKm: nearest?.distanceKm || null,
         });
 
         setIsDetecting(false);
       },
       async (_err) => {
-        // Fallback to IP Geolocation or closest restaurant branch if GPS prompt is denied or times out
+        // Fallback to IP location if GPS prompt was denied or times out
         try {
           const controller = new AbortController();
           const t = setTimeout(() => controller.abort(), 3000);
@@ -187,6 +236,7 @@ export function LocationModal({
                 address: fallbackAddr,
                 lat,
                 lng,
+                provider: 'network',
                 nearestBranchName: nearest?.name || 'Blue Area Branch',
                 distanceKm: nearest?.distanceKm || 1.4,
               });
@@ -194,9 +244,7 @@ export function LocationModal({
               return;
             }
           }
-        } catch {
-          // If network IP fetch fails, use first active branch
-        }
+        } catch {}
 
         const firstBranch = branches[0];
         if (firstBranch) {
@@ -206,6 +254,7 @@ export function LocationModal({
             address: fallbackAddr,
             lat: firstBranch.latitude ?? 33.6844,
             lng: firstBranch.longitude ?? 73.0479,
+            provider: 'branch',
             nearestBranchName: firstBranch.name,
             distanceKm: 0.9,
           });
@@ -216,12 +265,88 @@ export function LocationModal({
         setIsDetecting(false);
         setLocationError('Could not detect location. Please select an area below or type your address.');
       },
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
     );
   };
 
-  const handleSaveDelivery = (addr?: string) => {
+  const handleSelectSuggestion = async (s: Suggestion) => {
+    setAddressInput(s.fullAddress);
+    setShowSuggestions(false);
+
+    let lat = s.lat;
+    let lng = s.lng;
+    let finalAddr = s.fullAddress;
+    let provider = s.provider || 'photon';
+
+    // If coordinates are missing (e.g. Google Place prediction), resolve via placeId
+    if ((lat === undefined || lng === undefined) && s.id) {
+      try {
+        const res = await fetch(`/api/geocode?placeId=${encodeURIComponent(s.id)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.latitude && data.longitude) {
+            lat = data.latitude;
+            lng = data.longitude;
+            finalAddr = data.formattedAddress || finalAddr;
+            provider = 'google';
+            if (data.nearestBranch) {
+              const matched = branches.find((b) => b.id === data.nearestBranch.id);
+              if (matched) setSelectedBranch(matched);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error resolving place coordinates:', err);
+      }
+    }
+
+    if (lat !== undefined && lng !== undefined) {
+      setUserCoords({ lat, lng });
+
+      let nearest: (Branch & { distanceKm: number }) | null = null;
+      let minDistance = Infinity;
+      for (const b of branches) {
+        if (b.latitude != null && b.longitude != null) {
+          const dist = calculateDistanceKm(lat, lng, b.latitude, b.longitude);
+          if (dist < minDistance) {
+            minDistance = dist;
+            nearest = { ...b, distanceKm: dist };
+          }
+        }
+      }
+
+      if (nearest) {
+        setSelectedBranch(nearest);
+      }
+
+      setDetectedLocation({
+        address: finalAddr,
+        lat,
+        lng,
+        provider,
+        nearestBranchName: nearest?.name || null,
+        distanceKm: nearest?.distanceKm || null,
+      });
+    }
+  };
+
+  const handleSaveDelivery = async (addr?: string) => {
     const finalAddr = addr || addressInput.trim() || 'Blue Area, Islamabad';
+
+    // If no coordinates detected yet for custom typed address, forward geocode to pick closest branch
+    if (!userCoords && finalAddr) {
+      try {
+        const res = await fetch(`/api/geocode?address=${encodeURIComponent(finalAddr)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.nearestBranch) {
+            const matched = branches.find((b) => b.id === data.nearestBranch.id);
+            if (matched) setSelectedBranch(matched);
+          }
+        }
+      } catch {}
+    }
+
     setSelectedAddress(finalAddr);
     onClose();
   };
@@ -291,14 +416,14 @@ export function LocationModal({
                 {isDetecting ? (
                   <>
                     <div className="h-4 w-4 border-2 border-[#F15B25] border-t-transparent rounded-full animate-spin" />
-                    <span>Acquiring GPS Satellite Signal...</span>
+                    <span>Pinpointing Satellite GPS Coordinates...</span>
                   </>
                 ) : (
                   <>
                     <span className="text-lg group-hover:scale-110 transition-transform">🎯</span>
                     <span>Use My Current Live Location</span>
                     <span className="text-[11px] bg-[#F15B25] text-white px-2 py-0.5 rounded-full font-bold">
-                      Instant GPS
+                      100% Live GPS
                     </span>
                   </>
                 )}
@@ -310,7 +435,9 @@ export function LocationModal({
                   <div className="flex items-center justify-between">
                     <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
                       <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                      Live Location Detected
+                      {detectedLocation.provider === 'google'
+                        ? 'Google Maps Verified'
+                        : 'Live GPS Location Detected'}
                     </span>
                     <span className="text-[10px] font-mono text-emerald-700">
                       {detectedLocation.lat.toFixed(4)}°N, {detectedLocation.lng.toFixed(4)}°E
@@ -340,31 +467,74 @@ export function LocationModal({
                 </div>
               )}
 
-              {/* Address Input Field */}
-              <div>
+              {/* Address Input Field with Autocomplete Dropdown */}
+              <div className="relative">
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
                   Delivery Address / Location
                 </label>
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Enter your street, sector, or apartment..."
+                    placeholder="Search street, sector, building or colony..."
                     value={addressInput}
-                    onChange={(e) => setAddressInput(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F15B25] focus:border-transparent font-semibold text-gray-900"
+                    onChange={(e) => {
+                      setAddressInput(e.target.value);
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => {
+                      if (suggestions.length > 0) setShowSuggestions(true);
+                    }}
+                    className="w-full pl-10 pr-8 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F15B25] focus:border-transparent font-semibold text-gray-900"
                     autoFocus
                   />
                   <span className="absolute left-3.5 top-3.5 text-gray-400">📍</span>
                   {addressInput && (
                     <button
                       type="button"
-                      onClick={() => setAddressInput('')}
+                      onClick={() => {
+                        setAddressInput('');
+                        setShowSuggestions(false);
+                      }}
                       className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 text-xs font-bold"
                     >
                       ✕
                     </button>
                   )}
                 </div>
+
+                {/* Floating Autocomplete Suggestions Dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-gray-200 z-50 max-h-60 overflow-y-auto divide-y divide-gray-100 animate-in fade-in zoom-in-95">
+                    <div className="px-3 py-1.5 bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-wider flex justify-between items-center">
+                      <span>Suggested Addresses</span>
+                      {isSearching && (
+                        <span className="inline-block h-3 w-3 border border-[#F15B25] border-t-transparent rounded-full animate-spin" />
+                      )}
+                    </div>
+                    {suggestions.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleSelectSuggestion(item)}
+                        className="w-full text-left px-3.5 py-2.5 hover:bg-orange-50/80 transition flex items-start gap-2.5 cursor-pointer group"
+                      >
+                        <span className="text-base text-gray-400 group-hover:text-[#F15B25] transition-colors mt-0.5">
+                          📍
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold text-gray-900 truncate">
+                            {item.title}
+                          </div>
+                          {item.subtitle && (
+                            <div className="text-[11px] text-gray-500 truncate">
+                              {item.subtitle}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Popular Service Areas */}
@@ -378,6 +548,7 @@ export function LocationModal({
                         type="button"
                         onClick={() => {
                           setAddressInput(area);
+                          setShowSuggestions(false);
                           handleSaveDelivery(area);
                         }}
                         className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 hover:bg-orange-50 hover:text-[#F15B25] transition cursor-pointer"

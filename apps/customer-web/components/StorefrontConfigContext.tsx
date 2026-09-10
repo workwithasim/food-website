@@ -34,6 +34,7 @@ export interface StorefrontSettings {
     logo_url?: string;
     footer_text?: string;
     copyright?: string;
+    google_maps_api_key?: string;
     social_links?: {
       facebook?: string;
       instagram?: string;
